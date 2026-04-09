@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UniBot</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #ece5dd;
+        }
+        .chat {
+            width: 300px;
+            margin: 50px auto;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .mensaje {
+            background: #dcf8c6;
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat">
+    <h3>UniBot 🎓</h3>
+
+    <div id="chatbox"></div>
+
+    <input type="text" id="mensaje" placeholder="Escribe aquí">
+    <button onclick="enviar()">Enviar</button>
+</div>
+
+<script>
+function enviar() {
+    let mensaje = document.getElementById("mensaje").value;
+
+    fetch("http://127.0.0.1:5000/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({mensaje: mensaje})
+    })
+    .then(res => res.json())
+    .then(data => {
+        let chatbox = document.getElementById("chatbox");
+
+        chatbox.innerHTML += "<div class='mensaje'><b>Tú:</b> " + mensaje + "</div>";
+        chatbox.innerHTML += "<div class='mensaje'><b>Bot:</b> " + data.respuesta + "</div>";
+    });
+}
+</script>
+
+</body>
+</html>
