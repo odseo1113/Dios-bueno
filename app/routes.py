@@ -102,6 +102,41 @@ def dashboard():
     )
 
 
+# 🔄 DATOS EN TIEMPO REAL (AJAX) ✅ CORREGIDO
+@main.route("/datos")
+def datos():
+    if "user" not in session:
+        return ""
+
+    tipo = session["tipo"]
+    usuarios = obtener_por_tipo(tipo)
+    total = contar_por_tipo(tipo)
+
+    html = ""
+    interesados = 0
+
+    for u in usuarios:
+        estado = "⚪ Normal"
+        clase = ""
+
+        if u[2] == "2":
+            estado = "🟢 Interesado"
+            clase = "interesado"
+            interesados += 1
+
+        html += f"""
+        <tr class="{clase}">
+            <td>{u[0]}</td>
+            <td>{u[1]}</td>
+            <td>{u[2]}</td>
+            <td>{u[4]}</td>
+            <td>{estado}</td>
+        </tr>
+        """
+
+    return f"{html}|{total}|{interesados}"
+
+
 # 🔐 LOGOUT
 @main.route("/logout")
 def logout():

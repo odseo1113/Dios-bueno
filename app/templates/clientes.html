@@ -1,4 +1,4 @@
-<!<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Panel de Clientes</title>
@@ -90,11 +90,11 @@
     <!-- 📊 ESTADÍSTICAS -->
     <div class="stats">
         <div class="card total">
-            📊 Total: {{ total }}
+            📊 Total: <span id="total">{{ total }}</span>
         </div>
 
         <div class="card interesados">
-            💰 Interesados: {{ interesados }}
+            💰 Interesados: <span id="interesados">0</span>
         </div>
     </div>
 
@@ -107,31 +107,52 @@
 
     <!-- 📋 TABLA -->
     <table>
-        <tr>
-            <th>ID</th>
-            <th>📱 Número</th>
-            <th>💬 Mensaje</th>
-            <th>📅 Fecha</th>
-            <th>Estado</th>
-        </tr>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>📱 Número</th>
+                <th>💬 Mensaje</th>
+                <th>📅 Fecha</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
 
-        {% for usuario in usuarios %}
-        <tr class="{% if usuario[2] == '2' %}interesado{% endif %}">
-            <td>{{ usuario[0] }}</td>
-            <td>{{ usuario[1] }}</td>
-            <td>{{ usuario[2] }}</td>
-            <td>{{ usuario[3] }}</td>
-            <td>
-                {% if usuario[2] == '2' %}
-                    🟢 Interesado
-                {% else %}
-                    ⚪ Normal
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-
+        <tbody id="tabla-clientes">
+            {% for usuario in usuarios %}
+            <tr class="{% if usuario[2] == '2' %}interesado{% endif %}">
+                <td>{{ usuario[0] }}</td>
+                <td>{{ usuario[1] }}</td>
+                <td>{{ usuario[2] }}</td>
+                <td>{{ usuario[4] }}</td>
+                <td>
+                    {% if usuario[2] == '2' %}
+                        🟢 Interesado
+                    {% else %}
+                        ⚪ Normal
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
+
+    <!-- 🔥 SCRIPT TIEMPO REAL -->
+    <script>
+    function actualizarDatos() {
+        fetch("/datos")
+            .then(res => res.text())
+            .then(data => {
+                let partes = data.split("|");
+
+                document.getElementById("tabla-clientes").innerHTML = partes[0];
+                document.getElementById("total").innerText = partes[1];
+                document.getElementById("interesados").innerText = partes[2];
+            });
+    }
+
+    // 🔁 cada 5 segundos
+    setInterval(actualizarDatos, 5000);
+    </script>
 
 </body>
 </html>
