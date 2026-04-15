@@ -1,21 +1,18 @@
-from flask import Blueprint, request, Response, render_template, send_file, session, redirect, url_for
+from flask import Blueprint, request, render_template, send_file, session, redirect
 from twilio.twiml.messaging_response import MessagingResponse
 from database import (
     guardar_usuario,
     obtener_por_tipo,
     contar_por_tipo,
-    validar_usuario
+    validar_usuario,
+    obtener_tipo_por_numero,
+    registrar_cliente
 )
 
 import pandas as pd
 from io import BytesIO
 
 main = Blueprint('main', __name__)
-
-# 🔥 CONFIG CLIENTES
-CLIENTES = {
-    "whatsapp:+573229252177": "abogado",
-}
 
 
 # 🔹 Home
@@ -24,19 +21,27 @@ def home():
     return "OK"
 
 
-# 🔹 Webhook
+# 🔹 Webhook (MULTI CLIENTE 🔥)
 @main.route("/webhook", methods=["POST"])
 def webhook():
     user_number = request.form.get("From", "")
     incoming_msg = request.form.get("Body", "").strip().lower()
 
-    tipo_cliente = CLIENTES.get(user_number, "default")
+    # 🔥 Obtener tipo desde DB
+    tipo_cliente = obtener_tipo_por_numero(user_number)
 
+    # 🔥 Si no existe, registrarlo automáticamente
+    if not tipo_cliente:
+        registrar_cliente(user_number, "abogado")
+        tipo_cliente = "abogado"
+
+    # Guardar mensaje
     guardar_usuario(user_number, incoming_msg, tipo_cliente)
 
     resp = MessagingResponse()
     msg = resp.message()
 
+    # 🔥 Lógica por tipo de cliente
     if tipo_cliente == "abogado":
 
         if "hola" in incoming_msg:
@@ -115,7 +120,7 @@ def exportar():
 
     df = pd.DataFrame(
         usuarios,
-        columns=["ID", "Número", "Mensaje", "Fecha", "Tipo"]
+        columns=["ID", "Número", "Mensaje", "Tipo", "Fecha"]
     )
 
     output = BytesIO()
