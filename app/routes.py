@@ -17,6 +17,11 @@ CLIENTES = {
     "whatsapp:+573229252177": "abogado",
 }
 
+@main.route("/crear_admin")
+def crear_admin():
+    from database import crear_cuenta
+    crear_cuenta("abogado1", "1234", "abogado")
+    return "Usuario creado"
 
 # 🔹 Home
 @main.route("/")
