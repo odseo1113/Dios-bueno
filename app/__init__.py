@@ -1,5 +1,5 @@
 from flask import Flask
-from .database import init_db  # 🔥 IMPORTANTE
+from database import init_db  # 🔥 IMPORTANTE
 
 def create_app():
     app = Flask(__name__)
