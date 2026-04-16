@@ -26,12 +26,22 @@ def init_db():
     )
     """)
 
-    # 📲 Tabla clientes (WHATSAPP → tipo cliente)
+    # 📲 Tabla clientes
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS clientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         numero TEXT UNIQUE,
         tipo TEXT
+    )
+    """)
+
+    # 🤖 Tabla respuestas automáticas
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS respuestas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo TEXT,
+        palabra TEXT,
+        respuesta TEXT
     )
     """)
 
@@ -53,7 +63,7 @@ def guardar_usuario(numero, mensaje, tipo):
     conn.close()
 
 
-# 🔹 Obtener tipo por número (CLAVE 🔥)
+# 🔹 Obtener tipo por número
 def obtener_tipo_por_numero(numero):
     conn = sqlite3.connect("usuarios.db")
     cursor = conn.cursor()
@@ -81,7 +91,7 @@ def registrar_cliente(numero, tipo="abogado"):
         )
         conn.commit()
     except:
-        pass  # ya existe
+        pass
 
     conn.close()
 
@@ -128,7 +138,7 @@ def contar_por_tipo(tipo):
     return count
 
 
-# 🔐 Crear cuenta (login)
+# 🔐 Crear cuenta
 def crear_cuenta(username, password, tipo):
     conn = sqlite3.connect("usuarios.db")
     cursor = conn.cursor()
@@ -156,3 +166,41 @@ def validar_usuario(username, password):
     conn.close()
 
     return user
+
+
+# 🤖 Guardar respuesta
+def guardar_respuesta(tipo, palabra, respuesta):
+    conn = sqlite3.connect("usuarios.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (?, ?, ?)",
+        (tipo, palabra, respuesta)
+    )
+
+    conn.commit()
+    conn.close()
+
+
+# 🤖 Obtener respuesta
+def obtener_respuesta(tipo, mensaje):
+    conn = sqlite3.connect("usuarios.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT respuesta FROM respuestas WHERE tipo = ? AND palabra = ?",
+        (tipo, mensaje)
+    )
+
+    row = cursor.fetchone()
+    conn.close()
+
+    return row[0] if row else None
+
+
+# 🔥 CARGAR RESPUESTAS DEMO (CLAVE)
+def cargar_respuestas_demo():
+    guardar_respuesta("abogado", "hola", "👋 Bienvenido al consultorio jurídico ⚖️\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
+    guardar_respuesta("abogado", "1", "⚖️ Derecho laboral, civil, familiar")
+    guardar_respuesta("abogado", "2", "💰 Desde $50.000 COP")
+    guardar_respuesta("abogado", "3", "📅 Envíanos tus datos para agendar")

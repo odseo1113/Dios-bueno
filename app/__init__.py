@@ -10,6 +10,9 @@ def create_app():
     # 🔥 INICIALIZAR BASE DE DATOS
     init_db()
 
+    from database import crear_tabla_respuestas
+crear_tabla_respuestas()
+
     from .routes import main
     app.register_blueprint(main)
 
