@@ -198,9 +198,37 @@ def obtener_respuesta(tipo, mensaje):
     return row[0] if row else None
 
 
-# 🔥 CARGAR RESPUESTAS DEMO (CLAVE)
+# 🤖 Obtener todas las respuestas (PARA PANEL)
+def obtener_respuestas(tipo):
+    conn = sqlite3.connect("usuarios.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT id, palabra, respuesta FROM respuestas WHERE tipo = ?",
+        (tipo,)
+    )
+
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+# 🔥 CARGAR RESPUESTAS DEMO
 def cargar_respuestas_demo():
     guardar_respuesta("abogado", "hola", "👋 Bienvenido al consultorio jurídico ⚖️\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
     guardar_respuesta("abogado", "1", "⚖️ Derecho laboral, civil, familiar")
     guardar_respuesta("abogado", "2", "💰 Desde $50.000 COP")
     guardar_respuesta("abogado", "3", "📅 Envíanos tus datos para agendar")
+
+    # 🗑️ Eliminar respuesta
+def eliminar_respuesta(id):
+    conn = sqlite3.connect("usuarios.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "DELETE FROM respuestas WHERE id = ?",
+        (id,)
+    )
+
+    conn.commit()
+    conn.close()

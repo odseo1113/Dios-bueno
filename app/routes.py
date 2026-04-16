@@ -7,7 +7,11 @@ from database import (
     validar_usuario,
     obtener_tipo_por_numero,
     registrar_cliente,
-    obtener_respuesta
+    obtener_respuesta,
+    obtener_respuestas,
+    guardar_respuesta,
+    cargar_respuestas_demo
+    eliminar_respuesta
 )
 
 import pandas as pd
@@ -22,15 +26,14 @@ def home():
     return "OK"
 
 
-# 🔥 CARGAR RESPUESTAS (USAR SOLO UNA VEZ)
+# 🔥 CARGAR RESPUESTAS (usar una sola vez)
 @main.route("/cargar")
 def cargar():
-    from database import cargar_respuestas_demo
     cargar_respuestas_demo()
     return "✅ Respuestas cargadas"
 
 
-# 🔹 Webhook (MULTI CLIENTE 🔥 + DINÁMICO)
+# 🔹 WEBHOOK (WhatsApp)
 @main.route("/webhook", methods=["POST"])
 def webhook():
     user_number = request.form.get("From", "")
@@ -47,7 +50,6 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
-    # 🔥 RESPUESTA DESDE DB
     respuesta = obtener_respuesta(tipo_cliente, incoming_msg)
 
     if respuesta:
@@ -103,6 +105,38 @@ def dashboard():
         usuarios=usuarios,
         total=total
     )
+
+
+# 🔥 PANEL DE RESPUESTAS (NUEVO)
+@main.route("/respuestas", methods=["GET", "POST"])
+def respuestas():
+    if "user" not in session:
+        return redirect("/login")
+
+    tipo = session["tipo"]
+
+    # 👉 Guardar nueva respuesta
+    if request.method == "POST":
+        palabra = request.form["palabra"].lower()
+        respuesta = request.form["respuesta"]
+
+        guardar_respuesta(tipo, palabra, respuesta)
+
+    respuestas = obtener_respuestas(tipo)
+
+    return render_template(
+        "respuestas.html",
+        respuestas=respuestas
+    )
+
+# 🗑️ Eliminar respuesta
+@main.route("/eliminar_respuesta/<int:id>")
+def eliminar_respuesta_route(id):
+    if "user" not in session:
+        return redirect("/login")
+
+    eliminar_respuesta(id)
+    return redirect("/respuestas")
 
 
 # 🔄 DATOS EN TIEMPO REAL

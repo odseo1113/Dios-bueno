@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panel de Respuestas</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+        }
+        table {
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        th {
+            background: #f4f4f4;
+        }
+        a {
+            text-decoration: none;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+<h2>🤖 Respuestas automáticas</h2>
+
+<form method="POST">
+    <input type="text" name="palabra" placeholder="Palabra clave" required>
+    <input type="text" name="respuesta" placeholder="Respuesta" required>
+    <button type="submit">Guardar</button>
+</form>
+
+<hr>
+
+<h3>📋 Lista</h3>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Palabra</th>
+        <th>Respuesta</th>
+        <th>Acción</th>
+    </tr>
+
+    {% for r in respuestas %}
+    <tr>
+        <td>{{ r[0] }}</td>
+        <td>{{ r[1] }}</td>
+        <td>{{ r[2] }}</td>
+        <td>
+            <a href="/eliminar_respuesta/{{ r[0] }}">❌ Eliminar</a>
+        </td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+</body>
+</html>
