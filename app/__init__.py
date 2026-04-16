@@ -1,13 +1,12 @@
 from flask import Flask
-from database import init_db  # ✅ SIN punto
+from database import init_db
 
 def create_app():
     app = Flask(__name__)
 
-    # 🔐 CLAVE PARA LOGIN
     app.secret_key = "superclave123"
 
-    # 🔥 INICIALIZAR DB
+    # 🔥 DB aquí, no en run.py
     init_db()
 
     from .routes import main
