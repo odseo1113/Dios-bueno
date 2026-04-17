@@ -33,6 +33,18 @@ def cargar():
     return "✅ Respuestas cargadas"
 
 
+# 🔐 CREAR ADMIN
+@main.route("/crear_admin")
+def crear_admin():
+    from database import crear_cuenta
+
+    try:
+        crear_cuenta("admin", "1234", "abogado")
+        return "✅ Usuario creado: admin / 1234"
+    except:
+        return "⚠️ El usuario ya existe"
+
+
 # 🔹 WEBHOOK (WhatsApp)
 @main.route("/webhook", methods=["POST"])
 def webhook():
@@ -107,7 +119,7 @@ def dashboard():
     )
 
 
-# 🔥 PANEL DE RESPUESTAS (NUEVO)
+# 🔥 PANEL DE RESPUESTAS
 @main.route("/respuestas", methods=["GET", "POST"])
 def respuestas():
     if "user" not in session:
@@ -122,12 +134,13 @@ def respuestas():
 
         guardar_respuesta(tipo, palabra, respuesta)
 
-    respuestas = obtener_respuestas(tipo)
+    lista_respuestas = obtener_respuestas(tipo)
 
     return render_template(
         "respuestas.html",
-        respuestas=respuestas
+        respuestas=lista_respuestas
     )
+
 
 # 🗑️ Eliminar respuesta
 @main.route("/eliminar_respuesta/<int:id>")
