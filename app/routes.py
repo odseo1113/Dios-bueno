@@ -10,7 +10,7 @@ from database import (
     obtener_respuesta,
     obtener_respuestas,
     guardar_respuesta,
-    cargar_respuestas_demo
+    cargar_respuestas_demo,
     eliminar_respuesta
 )
 

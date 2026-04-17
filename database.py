@@ -213,14 +213,7 @@ def obtener_respuestas(tipo):
     return rows
 
 
-# 🔥 CARGAR RESPUESTAS DEMO
-def cargar_respuestas_demo():
-    guardar_respuesta("abogado", "hola", "👋 Bienvenido al consultorio jurídico ⚖️\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
-    guardar_respuesta("abogado", "1", "⚖️ Derecho laboral, civil, familiar")
-    guardar_respuesta("abogado", "2", "💰 Desde $50.000 COP")
-    guardar_respuesta("abogado", "3", "📅 Envíanos tus datos para agendar")
-
-    # 🗑️ Eliminar respuesta
+# 🗑️ Eliminar respuesta
 def eliminar_respuesta(id):
     conn = sqlite3.connect("usuarios.db")
     cursor = conn.cursor()
@@ -232,3 +225,11 @@ def eliminar_respuesta(id):
 
     conn.commit()
     conn.close()
+
+
+# 🔥 CARGAR RESPUESTAS DEMO
+def cargar_respuestas_demo():
+    guardar_respuesta("abogado", "hola", "👋 Bienvenido al consultorio jurídico ⚖️\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
+    guardar_respuesta("abogado", "1", "⚖️ Derecho laboral, civil, familiar")
+    guardar_respuesta("abogado", "2", "💰 Desde $50.000 COP")
+    guardar_respuesta("abogado", "3", "📅 Envíanos tus datos para agendar")
