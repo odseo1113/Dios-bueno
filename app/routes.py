@@ -26,7 +26,7 @@ def home():
     return "OK"
 
 
-# 🔥 CARGAR RESPUESTAS (usar una sola vez)
+# 🔥 CARGAR RESPUESTAS
 @main.route("/cargar")
 def cargar():
     cargar_respuestas_demo()
@@ -45,7 +45,32 @@ def crear_admin():
         return "⚠️ El usuario ya existe"
 
 
-# 🔹 WEBHOOK (WhatsApp)
+# 🔥 CREAR USUARIOS EXTRA
+@main.route("/crear_users_extra")
+def crear_users_extra():
+    from database import crear_cuenta
+
+    try:
+        crear_cuenta("peluqueria", "1234", "peluqueria")
+        crear_cuenta("canina", "1234", "peluqueria_canina")
+    except:
+        pass
+
+    return "✅ usuarios peluquería creados"
+
+
+# 🔥 CREAR CLIENTES EXTRA
+@main.route("/crear_clientes_extra")
+def crear_clientes_extra():
+    from database import registrar_cliente
+
+    registrar_cliente("whatsapp:+3333", "peluqueria")
+    registrar_cliente("whatsapp:+4444", "peluqueria_canina")
+
+    return "✅ clientes peluquería creados"
+
+
+# 🔹 WEBHOOK
 @main.route("/webhook", methods=["POST"])
 def webhook():
     user_number = request.form.get("From", "")
@@ -67,7 +92,6 @@ def webhook():
     if respuesta:
         msg.body(respuesta)
     else:
-        # fallback
         if "hola" in incoming_msg:
             msg.body("👋 Bienvenido\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
         elif incoming_msg == "1":
@@ -127,7 +151,6 @@ def respuestas():
 
     tipo = session["tipo"]
 
-    # 👉 Guardar nueva respuesta
     if request.method == "POST":
         palabra = request.form["palabra"].lower()
         respuesta = request.form["respuesta"]
@@ -142,7 +165,7 @@ def respuestas():
     )
 
 
-# 🗑️ Eliminar respuesta
+# 🗑️ ELIMINAR RESPUESTA
 @main.route("/eliminar_respuesta/<int:id>")
 def eliminar_respuesta_route(id):
     if "user" not in session:
@@ -152,7 +175,7 @@ def eliminar_respuesta_route(id):
     return redirect("/respuestas")
 
 
-# 🔄 DATOS EN TIEMPO REAL
+# 🔄 DATOS
 @main.route("/datos")
 def datos():
     if "user" not in session:
