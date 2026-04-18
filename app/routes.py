@@ -70,6 +70,48 @@ def crear_clientes_extra():
     return "✅ clientes peluquería creados"
 
 
+# 🔥 SETUP COMPLETO (1 SOLO CLICK)
+@main.route("/setup")
+def setup():
+    from database import crear_cuenta, guardar_respuesta
+
+    # 🔐 USUARIOS
+    try:
+        crear_cuenta("admin", "1234", "abogado")
+    except:
+        pass
+
+    try:
+        crear_cuenta("peluqueria", "1234", "peluqueria")
+    except:
+        pass
+
+    try:
+        crear_cuenta("canina", "1234", "peluqueria_canina")
+    except:
+        pass
+
+    # ⚖️ ABOGADO
+    guardar_respuesta("abogado", "hola", "⚖️ Bienvenido\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
+    guardar_respuesta("abogado", "1", "⚖️ Derecho laboral, civil, familiar")
+    guardar_respuesta("abogado", "2", "💰 Desde $50.000")
+    guardar_respuesta("abogado", "3", "📅 Agenda tu cita")
+
+    # 💇 PELUQUERIA
+    guardar_respuesta("peluqueria", "hola", "💇 Bienvenido a la peluquería\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
+    guardar_respuesta("peluqueria", "1", "✂️ Corte, peinado, tintes")
+    guardar_respuesta("peluqueria", "2", "💰 Desde $20.000")
+    guardar_respuesta("peluqueria", "3", "📅 Agenda tu cita")
+
+    # 🐶 CANINA
+    guardar_respuesta("peluqueria_canina", "hola", "🐶 Peluquería canina\n1️⃣ Baño\n2️⃣ Precios\n3️⃣ Cita")
+    guardar_respuesta("peluqueria_canina", "1", "🛁 Baño, corte y limpieza")
+    guardar_respuesta("peluqueria_canina", "2", "💰 Desde $30.000")
+    guardar_respuesta("peluqueria_canina", "3", "📅 Agenda para tu mascota")
+
+    return "✅ SISTEMA LISTO"
+
+
 # 🔹 WEBHOOK (🔥 MODO PRUEBA CORREGIDO)
 @main.route("/webhook", methods=["POST"])
 def webhook():
@@ -90,7 +132,7 @@ def webhook():
             registrar_cliente(user_number, "abogado")
             tipo_cliente = "abogado"
 
-    # 🔥 LIMPIEZA FINAL (CLAVE)
+    # 🔥 LIMPIEZA FINAL
     incoming_msg = (
         incoming_msg
         .replace("test1", "")
