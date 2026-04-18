@@ -74,16 +74,14 @@ def crear_clientes_extra():
 @main.route("/webhook", methods=["POST"])
 def webhook():
     user_number = request.form.get("From", "")
-    incoming_msg = request.form.get("Body", "").strip().lower()
+    incoming_msg = request.form.get("Body", "").lower()
 
     # 🔥 DETECCIÓN SEGURA
     if "test1" in incoming_msg:
         tipo_cliente = "peluqueria"
-        incoming_msg = incoming_msg.replace("test1", "").strip()
 
     elif "test2" in incoming_msg:
         tipo_cliente = "peluqueria_canina"
-        incoming_msg = incoming_msg.replace("test2", "").strip()
 
     else:
         tipo_cliente = obtener_tipo_por_numero(user_number)
@@ -91,6 +89,14 @@ def webhook():
         if not tipo_cliente:
             registrar_cliente(user_number, "abogado")
             tipo_cliente = "abogado"
+
+    # 🔥 LIMPIEZA FINAL (CLAVE)
+    incoming_msg = (
+        incoming_msg
+        .replace("test1", "")
+        .replace("test2", "")
+        .strip()
+    )
 
     guardar_usuario(user_number, incoming_msg, tipo_cliente)
 
