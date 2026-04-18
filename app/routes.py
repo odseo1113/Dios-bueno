@@ -70,17 +70,27 @@ def crear_clientes_extra():
     return "✅ clientes peluquería creados"
 
 
-# 🔹 WEBHOOK
+# 🔹 WEBHOOK (🔥 MODO PRUEBA CORREGIDO)
 @main.route("/webhook", methods=["POST"])
 def webhook():
     user_number = request.form.get("From", "")
     incoming_msg = request.form.get("Body", "").strip().lower()
 
-    tipo_cliente = obtener_tipo_por_numero(user_number)
+    # 🔥 DETECCIÓN SEGURA
+    if "test1" in incoming_msg:
+        tipo_cliente = "peluqueria"
+        incoming_msg = incoming_msg.replace("test1", "").strip()
 
-    if not tipo_cliente:
-        registrar_cliente(user_number, "abogado")
-        tipo_cliente = "abogado"
+    elif "test2" in incoming_msg:
+        tipo_cliente = "peluqueria_canina"
+        incoming_msg = incoming_msg.replace("test2", "").strip()
+
+    else:
+        tipo_cliente = obtener_tipo_por_numero(user_number)
+
+        if not tipo_cliente:
+            registrar_cliente(user_number, "abogado")
+            tipo_cliente = "abogado"
 
     guardar_usuario(user_number, incoming_msg, tipo_cliente)
 
