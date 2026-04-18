@@ -116,13 +116,13 @@ def setup():
 @main.route("/webhook", methods=["POST"])
 def webhook():
     user_number = request.form.get("From", "")
-    incoming_msg = request.form.get("Body", "").lower()
+    incoming_msg = request.form.get("Body", "").strip().lower()  # ✅ FIX
 
     # 🔥 DETECCIÓN SEGURA
-    if "test1" in incoming_msg:
+    if incoming_msg.startswith("test1"):  # ✅ FIX
         tipo_cliente = "peluqueria"
 
-    elif "test2" in incoming_msg:
+    elif incoming_msg.startswith("test2"):  # ✅ FIX
         tipo_cliente = "peluqueria_canina"
 
     else:
