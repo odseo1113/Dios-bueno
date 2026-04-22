@@ -1,14 +1,29 @@
-import sqlite3
+import os
+import psycopg2
 
-# 🔹 Crear base de datos
+
+# 🔌 CONEXIÓN POSTGRES (RAILWAY)
+def conectar():
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn
+
+
+# 🔹 LIMPIAR TEXTO
+def limpiar(texto):
+    if not texto:
+        return ""
+    return texto.strip().lower()
+
+
+# 🔹 Crear base de datos (POSTGRES)
 def init_db():
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
-    # 📩 Tabla de mensajes
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         numero TEXT,
         mensaje TEXT,
         tipo TEXT,
@@ -16,29 +31,26 @@ def init_db():
     )
     """)
 
-    # 🔐 Tabla de cuentas (login)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS cuentas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         username TEXT UNIQUE,
         password TEXT,
         tipo TEXT
     )
     """)
 
-    # 📲 Tabla clientes
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS clientes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         numero TEXT UNIQUE,
         tipo TEXT
     )
     """)
 
-    # 🤖 Tabla respuestas automáticas
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS respuestas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         tipo TEXT,
         palabra TEXT,
         respuesta TEXT
@@ -51,11 +63,11 @@ def init_db():
 
 # 🔹 Guardar mensaje
 def guardar_usuario(numero, mensaje, tipo):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT INTO usuarios (numero, mensaje, tipo) VALUES (?, ?, ?)",
+        "INSERT INTO usuarios (numero, mensaje, tipo) VALUES (%s, %s, %s)",
         (numero, mensaje, tipo)
     )
 
@@ -65,11 +77,11 @@ def guardar_usuario(numero, mensaje, tipo):
 
 # 🔹 Obtener tipo por número
 def obtener_tipo_por_numero(numero):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT tipo FROM clientes WHERE numero = ?",
+        "SELECT tipo FROM clientes WHERE numero = %s",
         (numero,)
     )
 
@@ -81,12 +93,12 @@ def obtener_tipo_por_numero(numero):
 
 # 🔹 Registrar cliente automáticamente
 def registrar_cliente(numero, tipo="abogado"):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
     try:
         cursor.execute(
-            "INSERT INTO clientes (numero, tipo) VALUES (?, ?)",
+            "INSERT INTO clientes (numero, tipo) VALUES (%s, %s) ON CONFLICT (numero) DO NOTHING",
             (numero, tipo)
         )
         conn.commit()
@@ -96,25 +108,13 @@ def registrar_cliente(numero, tipo="abogado"):
     conn.close()
 
 
-# 🔹 Obtener todos
-def obtener_usuarios():
-    conn = sqlite3.connect("usuarios.db")
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM usuarios ORDER BY id DESC")
-    rows = cursor.fetchall()
-
-    conn.close()
-    return rows
-
-
 # 🔹 Filtrar por tipo
 def obtener_por_tipo(tipo):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT * FROM usuarios WHERE tipo = ? ORDER BY id DESC",
+        "SELECT * FROM usuarios WHERE tipo = %s ORDER BY id DESC",
         (tipo,)
     )
 
@@ -125,11 +125,11 @@ def obtener_por_tipo(tipo):
 
 # 🔹 Contar por tipo
 def contar_por_tipo(tipo):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT COUNT(*) FROM usuarios WHERE tipo = ?",
+        "SELECT COUNT(*) FROM usuarios WHERE tipo = %s",
         (tipo,)
     )
 
@@ -140,25 +140,28 @@ def contar_por_tipo(tipo):
 
 # 🔐 Crear cuenta
 def crear_cuenta(username, password, tipo):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "INSERT INTO cuentas (username, password, tipo) VALUES (?, ?, ?)",
-        (username, password, tipo)
-    )
+    try:
+        cursor.execute(
+            "INSERT INTO cuentas (username, password, tipo) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+            (username, password, tipo)
+        )
+        conn.commit()
+    except:
+        pass
 
-    conn.commit()
     conn.close()
 
 
 # 🔐 Validar usuario
 def validar_usuario(username, password):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT * FROM cuentas WHERE username = ? AND password = ?",
+        "SELECT * FROM cuentas WHERE username = %s AND password = %s",
         (username, password)
     )
 
@@ -170,41 +173,75 @@ def validar_usuario(username, password):
 
 # 🤖 Guardar respuesta
 def guardar_respuesta(tipo, palabra, respuesta):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (?, ?, ?)",
-        (tipo, palabra, respuesta)
-    )
+    palabra = limpiar(palabra)
+    tipo = limpiar(tipo)
 
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute(
+            "SELECT id FROM respuestas WHERE tipo = %s AND palabra = %s",
+            (tipo, palabra)
+        )
+
+        existe = cursor.fetchone()
+
+        if existe:
+            cursor.execute(
+                "UPDATE respuestas SET respuesta = %s WHERE id = %s",
+                (respuesta, existe[0])
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)",
+                (tipo, palabra, respuesta)
+            )
+
+        conn.commit()
+
+    except Exception as e:
+        print("ERROR guardar_respuesta:", e)
+
+    finally:
+        conn.close()
 
 
 # 🤖 Obtener respuesta
 def obtener_respuesta(tipo, mensaje):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
+    mensaje = limpiar(mensaje)
+    tipo = limpiar(tipo)
+
     cursor.execute(
-        "SELECT respuesta FROM respuestas WHERE tipo = ? AND palabra = ?",
+        """
+        SELECT respuesta 
+        FROM respuestas 
+        WHERE tipo = %s 
+        AND palabra = %s
+        ORDER BY id DESC
+        LIMIT 1
+        """,
         (tipo, mensaje)
     )
 
-    row = cursor.fetchone()
+    resultado = cursor.fetchone()
     conn.close()
 
-    return row[0] if row else None
+    return resultado[0] if resultado else None
 
 
-# 🤖 Obtener todas las respuestas (PARA PANEL)
+# 🤖 Obtener todas
 def obtener_respuestas(tipo):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
+    tipo = limpiar(tipo)
+
     cursor.execute(
-        "SELECT id, palabra, respuesta FROM respuestas WHERE tipo = ?",
+        "SELECT id, palabra, respuesta FROM respuestas WHERE tipo = %s",
         (tipo,)
     )
 
@@ -215,11 +252,11 @@ def obtener_respuestas(tipo):
 
 # 🗑️ Eliminar respuesta
 def eliminar_respuesta(id):
-    conn = sqlite3.connect("usuarios.db")
+    conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute(
-        "DELETE FROM respuestas WHERE id = ?",
+        "DELETE FROM respuestas WHERE id = %s",
         (id,)
     )
 
@@ -227,7 +264,7 @@ def eliminar_respuesta(id):
     conn.close()
 
 
-# 🔥 CARGAR RESPUESTAS DEMO
+# 🔥 DEMO
 def cargar_respuestas_demo():
     guardar_respuesta("abogado", "hola", "👋 Bienvenido al consultorio jurídico ⚖️\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
     guardar_respuesta("abogado", "1", "⚖️ Derecho laboral, civil, familiar")

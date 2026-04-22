@@ -6,8 +6,12 @@ def create_app():
 
     app.secret_key = "superclave123"
 
-    # 🔥 DB aquí, no en run.py
-    init_db()
+    # 🔥 Inicializar DB con manejo de error (CLAVE en Railway)
+    try:
+        init_db()
+        print("✅ Base de datos inicializada correctamente")
+    except Exception as e:
+        print("❌ ERROR init_db:", e)
 
     from .routes import main
     app.register_blueprint(main)

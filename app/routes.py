@@ -17,13 +17,21 @@ from database import (
 import pandas as pd
 from io import BytesIO
 
+print("🔥 ROUTES CARGADO")
+
 main = Blueprint('main', __name__)
+
+
+# 🔥 TEST
+@main.route("/test")
+def test():
+    return "FUNCIONANDO TEST 123"
 
 
 # 🔹 Home
 @main.route("/")
 def home():
-    return "OK"
+    return "CAMBIO REAL 999"
 
 
 # 🔥 CARGAR RESPUESTAS
@@ -45,84 +53,69 @@ def crear_admin():
         return "⚠️ El usuario ya existe"
 
 
-# 🔥 CREAR USUARIOS EXTRA
-@main.route("/crear_users_extra")
-def crear_users_extra():
-    from database import crear_cuenta
-
-    try:
-        crear_cuenta("peluqueria", "1234", "peluqueria")
-        crear_cuenta("canina", "1234", "peluqueria_canina")
-    except:
-        pass
-
-    return "✅ usuarios peluquería creados"
-
-
-# 🔥 CREAR CLIENTES EXTRA
-@main.route("/crear_clientes_extra")
-def crear_clientes_extra():
-    from database import registrar_cliente
-
-    registrar_cliente("whatsapp:+3333", "peluqueria")
-    registrar_cliente("whatsapp:+4444", "peluqueria_canina")
-
-    return "✅ clientes peluquería creados"
-
-
-# 🔥 SETUP COMPLETO (1 SOLO CLICK)
+# 🔥 SETUP (100% POSTGRES)
 @main.route("/setup")
 def setup():
-    from database import crear_cuenta, guardar_respuesta
-
-    # 🔐 USUARIOS
-    try:
-        crear_cuenta("admin", "1234", "abogado")
-    except:
-        pass
+    from database import conectar
 
     try:
-        crear_cuenta("peluqueria", "1234", "peluqueria")
-    except:
-        pass
+        conn = conectar()
+        cursor = conn.cursor()
 
-    try:
-        crear_cuenta("canina", "1234", "peluqueria_canina")
-    except:
-        pass
+        # 🔥 LIMPIAR
+        cursor.execute("DELETE FROM respuestas")
 
-    # ⚖️ ABOGADO
-    guardar_respuesta("abogado", "hola", "⚖️ Bienvenido\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
-    guardar_respuesta("abogado", "1", "⚖️ Derecho laboral, civil, familiar")
-    guardar_respuesta("abogado", "2", "💰 Desde $50.000")
-    guardar_respuesta("abogado", "3", "📅 Agenda tu cita")
+        # 🔐 USUARIOS
+        cursor.execute(
+            "INSERT INTO cuentas (username, password, tipo) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+            ("admin", "1234", "abogado")
+        )
+        cursor.execute(
+            "INSERT INTO cuentas (username, password, tipo) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+            ("peluqueria", "1234", "peluqueria")
+        )
+        cursor.execute(
+            "INSERT INTO cuentas (username, password, tipo) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+            ("canina", "1234", "peluqueria_canina")
+        )
 
-    # 💇 PELUQUERIA
-    guardar_respuesta("peluqueria", "hola", "💇 Bienvenido a la peluquería\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
-    guardar_respuesta("peluqueria", "1", "✂️ Corte, peinado, tintes")
-    guardar_respuesta("peluqueria", "2", "💰 Desde $20.000")
-    guardar_respuesta("peluqueria", "3", "📅 Agenda tu cita")
+        # ⚖️ ABOGADO
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("abogado", "hola", "⚖️ Bienvenido\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("abogado", "1", "⚖️ Derecho laboral, civil, familiar"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("abogado", "2", "💰 Desde $50.000"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("abogado", "3", "📅 Agenda tu cita"))
 
-    # 🐶 CANINA
-    guardar_respuesta("peluqueria_canina", "hola", "🐶 Peluquería canina\n1️⃣ Baño\n2️⃣ Precios\n3️⃣ Cita")
-    guardar_respuesta("peluqueria_canina", "1", "🛁 Baño, corte y limpieza")
-    guardar_respuesta("peluqueria_canina", "2", "💰 Desde $30.000")
-    guardar_respuesta("peluqueria_canina", "3", "📅 Agenda para tu mascota")
+        # 💇 PELUQUERIA
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria", "hola", "💇 Bienvenido\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria", "1", "✂️ Corte, peinado, tintes"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria", "2", "💰 Desde $20.000"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria", "3", "📅 Agenda tu cita"))
 
-    return "✅ SISTEMA LISTO"
+        # 🐶 CANINA
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria_canina", "hola", "🐶 Peluquería canina\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria_canina", "1", "🛁 Baño, corte y limpieza"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria_canina", "2", "💰 Desde $30.000"))
+        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria_canina", "3", "📅 Agenda para tu mascota"))
+
+        conn.commit()
+        conn.close()
+
+        return "✅ SETUP OK"
+
+    except Exception as e:
+        return f"❌ ERROR REAL: {str(e)}"
 
 
-# 🔹 WEBHOOK (🔥 MODO PRUEBA CORREGIDO)
+# 🔹 WEBHOOK
 @main.route("/webhook", methods=["POST"])
 def webhook():
     user_number = request.form.get("From", "")
-    incoming_msg = request.form.get("Body", "").strip().lower()  # ✅ FIX
+    incoming_msg = request.form.get("Body", "").strip().lower()
 
-    # 🔥 DETECCIÓN SEGURA
-    if incoming_msg.startswith("test1"):  # ✅ FIX
+    if incoming_msg.startswith("test1"):
         tipo_cliente = "peluqueria"
 
-    elif incoming_msg.startswith("test2"):  # ✅ FIX
+    elif incoming_msg.startswith("test2"):
         tipo_cliente = "peluqueria_canina"
 
     else:
@@ -132,13 +125,7 @@ def webhook():
             registrar_cliente(user_number, "abogado")
             tipo_cliente = "abogado"
 
-    # 🔥 LIMPIEZA FINAL
-    incoming_msg = (
-        incoming_msg
-        .replace("test1", "")
-        .replace("test2", "")
-        .strip()
-    )
+    incoming_msg = incoming_msg.replace("test1", "").replace("test2", "").strip()
 
     guardar_usuario(user_number, incoming_msg, tipo_cliente)
 
@@ -150,147 +137,6 @@ def webhook():
     if respuesta:
         msg.body(respuesta)
     else:
-        if "hola" in incoming_msg:
-            msg.body("👋 Bienvenido\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita")
-        elif incoming_msg == "1":
-            msg.body("Servicios disponibles")
-        elif incoming_msg == "2":
-            msg.body("Información de precios")
-        elif incoming_msg == "3":
-            msg.body("Agenda tu cita")
-        else:
-            msg.body("Escribe 'hola'")
+        msg.body("Escribe 'hola'")
 
     return str(resp)
-
-
-# 🔐 LOGIN
-@main.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        user = validar_usuario(
-            request.form["username"],
-            request.form["password"]
-        )
-
-        if user:
-            session["user"] = user[1]
-            session["tipo"] = user[3]
-            return redirect("/dashboard")
-
-        return "❌ Credenciales incorrectas"
-
-    return render_template("login.html")
-
-
-# 🔐 DASHBOARD
-@main.route("/dashboard")
-def dashboard():
-    if "user" not in session:
-        return redirect("/login")
-
-    tipo = session["tipo"]
-
-    usuarios = obtener_por_tipo(tipo)
-    total = contar_por_tipo(tipo)
-
-    return render_template(
-        "clientes.html",
-        usuarios=usuarios,
-        total=total
-    )
-
-
-# 🔥 PANEL DE RESPUESTAS
-@main.route("/respuestas", methods=["GET", "POST"])
-def respuestas():
-    if "user" not in session:
-        return redirect("/login")
-
-    tipo = session["tipo"]
-
-    if request.method == "POST":
-        palabra = request.form["palabra"].lower()
-        respuesta = request.form["respuesta"]
-
-        guardar_respuesta(tipo, palabra, respuesta)
-
-    lista_respuestas = obtener_respuestas(tipo)
-
-    return render_template(
-        "respuestas.html",
-        respuestas=lista_respuestas
-    )
-
-
-# 🗑️ ELIMINAR RESPUESTA
-@main.route("/eliminar_respuesta/<int:id>")
-def eliminar_respuesta_route(id):
-    if "user" not in session:
-        return redirect("/login")
-
-    eliminar_respuesta(id)
-    return redirect("/respuestas")
-
-
-# 🔄 DATOS
-@main.route("/datos")
-def datos():
-    if "user" not in session:
-        return ""
-
-    tipo = session["tipo"]
-    usuarios = obtener_por_tipo(tipo)
-    total = contar_por_tipo(tipo)
-
-    html = ""
-    interesados = 0
-
-    for u in usuarios:
-        estado = "⚪ Normal"
-        clase = ""
-
-        if u[2] == "2":
-            estado = "🟢 Interesado"
-            clase = "interesado"
-            interesados += 1
-
-        html += f"""
-        <tr class="{clase}">
-            <td>{u[0]}</td>
-            <td>{u[1]}</td>
-            <td>{u[2]}</td>
-            <td>{u[4]}</td>
-            <td>{estado}</td>
-        </tr>
-        """
-
-    return f"{html}|{total}|{interesados}"
-
-
-# 🔐 LOGOUT
-@main.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login")
-
-
-# 📤 EXPORTAR
-@main.route("/exportar")
-def exportar():
-    if "user" not in session:
-        return redirect("/login")
-
-    tipo = session["tipo"]
-    usuarios = obtener_por_tipo(tipo)
-
-    df = pd.DataFrame(
-        usuarios,
-        columns=["ID", "Número", "Mensaje", "Tipo", "Fecha"]
-    )
-
-    output = BytesIO()
-    df.to_excel(output, index=False)
-    output.seek(0)
-
-    return send_file(output, download_name="clientes.xlsx", as_attachment=True)
