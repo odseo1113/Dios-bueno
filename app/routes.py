@@ -17,6 +17,9 @@ from database import (
 import pandas as pd
 from io import BytesIO
 
+# 🔥 DEBUG DEPLOY (CLAVE)
+print("🚀 VERSION NUEVA DEPLOYADA")
+
 print("🔥 ROUTES CARGADO")
 
 main = Blueprint('main', __name__)
@@ -31,7 +34,7 @@ def test():
 # 🔹 Home
 @main.route("/")
 def home():
-    return "CAMBIO REAL 999"
+    return "CAMBIO REAL 123456"
 
 
 # 🔥 CARGAR RESPUESTAS
@@ -109,34 +112,48 @@ def setup():
 # 🔹 WEBHOOK
 @main.route("/webhook", methods=["POST"])
 def webhook():
-    user_number = request.form.get("From", "")
-    incoming_msg = request.form.get("Body", "").strip().lower()
+    try:
+        user_number = request.form.get("From", "")
+        incoming_msg = request.form.get("Body", "").strip().lower()
 
-    if incoming_msg.startswith("test1"):
-        tipo_cliente = "peluqueria"
+        # 🔥 DETECTAR TIPO
+        if incoming_msg.startswith("test1"):
+            tipo_cliente = "peluqueria"
+            incoming_msg = incoming_msg.replace("test1", "").strip()
+            if incoming_msg == "":
+                incoming_msg = "hola"
 
-    elif incoming_msg.startswith("test2"):
-        tipo_cliente = "peluqueria_canina"
+        elif incoming_msg.startswith("test2"):
+            tipo_cliente = "peluqueria_canina"
+            incoming_msg = incoming_msg.replace("test2", "").strip()
+            if incoming_msg == "":
+                incoming_msg = "hola"
 
-    else:
-        tipo_cliente = obtener_tipo_por_numero(user_number)
+        else:
+            tipo_cliente = obtener_tipo_por_numero(user_number)
 
-        if not tipo_cliente:
-            registrar_cliente(user_number, "abogado")
-            tipo_cliente = "abogado"
+            if not tipo_cliente:
+                registrar_cliente(user_number, "abogado")
+                tipo_cliente = "abogado"
 
-    incoming_msg = incoming_msg.replace("test1", "").replace("test2", "").strip()
+        # 🔥 GUARDAR
+        guardar_usuario(user_number, incoming_msg, tipo_cliente)
 
-    guardar_usuario(user_number, incoming_msg, tipo_cliente)
+        resp = MessagingResponse()
+        msg = resp.message()
 
-    resp = MessagingResponse()
-    msg = resp.message()
+        # 🔥 RESPUESTA
+        respuesta = obtener_respuesta(tipo_cliente, incoming_msg)
 
-    respuesta = obtener_respuesta(tipo_cliente, incoming_msg)
+        if respuesta:
+            msg.body(respuesta)
+        else:
+            msg.body("Escribe 'hola'")
 
-    if respuesta:
-        msg.body(respuesta)
-    else:
-        msg.body("Escribe 'hola'")
+        return str(resp)
 
-    return str(resp)
+    except Exception as e:
+        print("ERROR WEBHOOK:", e)
+        resp = MessagingResponse()
+        resp.message("Error interno")
+        return str(resp)

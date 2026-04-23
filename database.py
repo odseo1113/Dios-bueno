@@ -4,9 +4,15 @@ import psycopg2
 
 # 🔌 CONEXIÓN POSTGRES (RAILWAY)
 def conectar():
-    DATABASE_URL = os.getenv("DATABASE_URL")
-    conn = psycopg2.connect(DATABASE_URL)
-    return conn
+    import psycopg2
+
+    print("🚨 ENTRE A CONECTAR")
+
+    DATABASE_URL = "postgresql://postgres:pPdLgVSnWTFoJXIPcZqxxxQDngDlZBfj@shinkansen.proxy.rlwy.net:12209/railway"
+
+    print("🚨 URL:", DATABASE_URL)
+
+    return psycopg2.connect(DATABASE_URL)
 
 
 # 🔹 LIMPIAR TEXTO

@@ -6,7 +6,7 @@ def create_app():
 
     app.secret_key = "superclave123"
 
-    # 🔥 Inicializar DB con manejo de error (CLAVE en Railway)
+    # 🔥 SOLO intenta iniciar DB si conexión funciona
     try:
         init_db()
         print("✅ Base de datos inicializada correctamente")
