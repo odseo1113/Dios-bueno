@@ -142,3 +142,76 @@ def obtener_respuesta(tipo, mensaje):
     conn.close()
 
     return resultado[0] if resultado else None
+
+
+# 🔹 OBTENER TODAS LAS RESPUESTAS
+def obtener_respuestas(tipo):
+    tipo = normalizar_numero(tipo)
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT palabra, respuesta FROM respuestas WHERE tipo = %s",
+        (tipo,)
+    )
+
+    datos = cursor.fetchall()
+    conn.close()
+
+    return datos
+
+
+# 🔹 ELIMINAR RESPUESTA
+def eliminar_respuesta(tipo, palabra):
+    tipo = normalizar_numero(tipo)
+    palabra = limpiar(palabra)
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "DELETE FROM respuestas WHERE tipo = %s AND palabra = %s",
+        (tipo, palabra)
+    )
+
+    conn.commit()
+    conn.close()
+
+
+# 🔹 CONTAR POR TIPO (dummy seguro)
+def contar_por_tipo(tipo):
+    return 0
+
+
+# 🔹 OBTENER POR TIPO (dummy seguro)
+def obtener_por_tipo(tipo):
+    return []
+
+
+# 🔹 VALIDAR USUARIO (dummy seguro)
+def validar_usuario(username, password):
+    return None
+
+
+# 🔹 OBTENER TIPO POR NÚMERO
+def obtener_tipo_por_numero(numero):
+    numero = normalizar_numero(numero)
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT tipo FROM clientes WHERE numero = %s LIMIT 1",
+        (numero,)
+    )
+
+    resultado = cursor.fetchone()
+    conn.close()
+
+    return resultado[0] if resultado else None
+
+
+# 🔥 FUNCIÓN FALTANTE (CRÍTICA)
+def cargar_respuestas_demo():
+    print("⚠️ cargar_respuestas_demo ejecutado (placeholder)")
