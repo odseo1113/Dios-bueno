@@ -1,25 +1,16 @@
-from flask import Blueprint, request, render_template, send_file, session, redirect
+from flask import Blueprint, request
 from twilio.twiml.messaging_response import MessagingResponse
 from database import (
     guardar_usuario,
-    obtener_por_tipo,
-    contar_por_tipo,
-    validar_usuario,
-    obtener_tipo_por_numero,
     registrar_cliente,
     obtener_respuesta,
-    obtener_respuestas,
     guardar_respuesta,
     cargar_respuestas_demo,
-    eliminar_respuesta
+    normalizar_numero
 )
 
-import pandas as pd
-from io import BytesIO
-
-# 🔥 DEBUG DEPLOY (CLAVE)
+# 🔥 DEBUG
 print("🚀 VERSION NUEVA DEPLOYADA")
-
 print("🔥 ROUTES CARGADO")
 
 main = Blueprint('main', __name__)
@@ -31,10 +22,17 @@ def test():
     return "FUNCIONANDO TEST 123"
 
 
-# 🔹 Home
+# 🔹 HOME
 @main.route("/")
 def home():
-    return "CAMBIO REAL 123456"
+    return "CAMBIO REAL NUEVO 999999 🚀"
+
+
+# 🔥 PING (PRUEBA CLAVE)
+@main.route("/ping")
+def ping():
+    print("🔥 PING OK")
+    return "pong"
 
 
 # 🔥 CARGAR RESPUESTAS
@@ -44,19 +42,7 @@ def cargar():
     return "✅ Respuestas cargadas"
 
 
-# 🔐 CREAR ADMIN
-@main.route("/crear_admin")
-def crear_admin():
-    from database import crear_cuenta
-
-    try:
-        crear_cuenta("admin", "1234", "abogado")
-        return "✅ Usuario creado: admin / 1234"
-    except:
-        return "⚠️ El usuario ya existe"
-
-
-# 🔥 SETUP (100% POSTGRES)
+# 🔥 SETUP
 @main.route("/setup")
 def setup():
     from database import conectar
@@ -65,40 +51,16 @@ def setup():
         conn = conectar()
         cursor = conn.cursor()
 
-        # 🔥 LIMPIAR
         cursor.execute("DELETE FROM respuestas")
 
-        # 🔐 USUARIOS
         cursor.execute(
-            "INSERT INTO cuentas (username, password, tipo) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+            """
+            INSERT INTO cuentas (username, password, tipo)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (username) DO NOTHING
+            """,
             ("admin", "1234", "abogado")
         )
-        cursor.execute(
-            "INSERT INTO cuentas (username, password, tipo) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
-            ("peluqueria", "1234", "peluqueria")
-        )
-        cursor.execute(
-            "INSERT INTO cuentas (username, password, tipo) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
-            ("canina", "1234", "peluqueria_canina")
-        )
-
-        # ⚖️ ABOGADO
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("abogado", "hola", "⚖️ Bienvenido\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("abogado", "1", "⚖️ Derecho laboral, civil, familiar"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("abogado", "2", "💰 Desde $50.000"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("abogado", "3", "📅 Agenda tu cita"))
-
-        # 💇 PELUQUERIA
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria", "hola", "💇 Bienvenido\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria", "1", "✂️ Corte, peinado, tintes"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria", "2", "💰 Desde $20.000"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria", "3", "📅 Agenda tu cita"))
-
-        # 🐶 CANINA
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria_canina", "hola", "🐶 Peluquería canina\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria_canina", "1", "🛁 Baño, corte y limpieza"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria_canina", "2", "💰 Desde $30.000"))
-        cursor.execute("INSERT INTO respuestas (tipo, palabra, respuesta) VALUES (%s, %s, %s)", ("peluqueria_canina", "3", "📅 Agenda para tu mascota"))
 
         conn.commit()
         conn.close()
@@ -106,54 +68,109 @@ def setup():
         return "✅ SETUP OK"
 
     except Exception as e:
-        return f"❌ ERROR REAL: {str(e)}"
+        print("❌ ERROR SETUP:", e)
+        return f"❌ ERROR: {str(e)}"
 
 
-# 🔹 WEBHOOK
+# 🔥 RESET CLIENTES
+@main.route("/reset_clientes")
+def reset_clientes():
+    from database import conectar
+
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM clientes")
+
+        conn.commit()
+        conn.close()
+
+        return "✅ clientes reseteados"
+
+    except Exception as e:
+        print("❌ ERROR RESET:", e)
+        return f"❌ ERROR: {str(e)}"
+
+
+# 🔥 SETUP CLIENTE (FIX REAL)
+@main.route("/setup_cliente", methods=["GET"], strict_slashes=False)
+def setup_cliente():
+    print("🔥🔥🔥 SETUP_CLIENTE HIT 🔥🔥🔥")
+
+    from database import conectar, guardar_respuesta
+
+    numero = request.args.get("numero")
+
+    if not numero:
+        return "❌ Falta parámetro numero"
+
+    numero = normalizar_numero(numero)
+    print("📌 NUMERO CONFIG:", numero)
+
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "DELETE FROM respuestas WHERE tipo = %s",
+            (numero,)
+        )
+
+        conn.commit()
+        conn.close()
+
+        # 🔥 RESPUESTAS
+        guardar_respuesta(numero, "hola",
+            "🐶 ¡Hola! Bienvenido a *Peluquería Canina 🐾*\n\n"
+            "1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita\n4️⃣ Ubicación"
+        )
+
+        guardar_respuesta(numero, "1", "🛁 Baño, corte, limpieza")
+        guardar_respuesta(numero, "2", "💰 Desde $30.000")
+        guardar_respuesta(numero, "3", "📅 Agenda tu cita")
+        guardar_respuesta(numero, "4", "📍 Dirección aquí")
+
+        return f"✅ Cliente {numero} configurado"
+
+    except Exception as e:
+        print("❌ ERROR SETUP_CLIENTE:", e)
+        return f"❌ ERROR: {str(e)}"
+
+
+# 🔥 WEBHOOK
 @main.route("/webhook", methods=["POST"])
 def webhook():
+    print("🔥 WEBHOOK HIT 🔥")
+
     try:
         user_number = request.form.get("From", "")
+        numero_twilio = request.form.get("To", "")
         incoming_msg = request.form.get("Body", "").strip().lower()
 
-        # 🔥 DETECTAR TIPO
-        if incoming_msg.startswith("test1"):
-            tipo_cliente = "peluqueria"
-            incoming_msg = incoming_msg.replace("test1", "").strip()
-            if incoming_msg == "":
-                incoming_msg = "hola"
+        negocio = normalizar_numero(numero_twilio)
 
-        elif incoming_msg.startswith("test2"):
-            tipo_cliente = "peluqueria_canina"
-            incoming_msg = incoming_msg.replace("test2", "").strip()
-            if incoming_msg == "":
-                incoming_msg = "hola"
+        print("NEGOCIO:", negocio)
+        print("USUARIO:", user_number)
+        print("MENSAJE:", incoming_msg)
 
-        else:
-            tipo_cliente = obtener_tipo_por_numero(user_number)
-
-            if not tipo_cliente:
-                registrar_cliente(user_number, "abogado")
-                tipo_cliente = "abogado"
-
-        # 🔥 GUARDAR
-        guardar_usuario(user_number, incoming_msg, tipo_cliente)
+        registrar_cliente(user_number, negocio)
+        guardar_usuario(user_number, incoming_msg, negocio)
 
         resp = MessagingResponse()
         msg = resp.message()
 
-        # 🔥 RESPUESTA
-        respuesta = obtener_respuesta(tipo_cliente, incoming_msg)
+        respuesta = obtener_respuesta(negocio, incoming_msg)
 
         if respuesta:
             msg.body(respuesta)
         else:
-            msg.body("Escribe 'hola'")
+            msg.body("🐶 Escribe 'hola'")
 
         return str(resp)
 
     except Exception as e:
-        print("ERROR WEBHOOK:", e)
+        print("❌ ERROR WEBHOOK:", e)
         resp = MessagingResponse()
         resp.message("Error interno")
         return str(resp)
