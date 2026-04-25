@@ -1,6 +1,5 @@
-flask
-twilio
-pandas
-openpyxl
-gunicorn
-psycopg2-binary
+Flask==3.0.3
+gunicorn==21.2.0
+psycopg2-binary==2.9.9
+twilio==9.0.0
+pandas==2.2.2
