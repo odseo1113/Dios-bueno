@@ -6,12 +6,15 @@ from database import (
     obtener_respuesta,
     guardar_respuesta,
     cargar_respuestas_demo,
-    normalizar_numero
+    normalizar_numero,
+    obtener_respuestas,
+    eliminar_respuesta
 )
 
 # 🔥 DEBUG
 print("🚀 VERSION NUEVA DEPLOYADA")
 print("🔥 ROUTES CARGADO")
+print("🔥 ARCHIVO ROUTES REAL:", __file__)  # 👈 ESTA LÍNEA NUEVA
 
 main = Blueprint('main', __name__)
 
@@ -28,7 +31,7 @@ def home():
     return "CAMBIO REAL NUEVO 999999 🚀"
 
 
-# 🔥 PING (PRUEBA CLAVE)
+# 🔥 PING
 @main.route("/ping")
 def ping():
     print("🔥 PING OK")
@@ -93,12 +96,12 @@ def reset_clientes():
         return f"❌ ERROR: {str(e)}"
 
 
-# 🔥 SETUP CLIENTE (FIX REAL)
+# 🔥 SETUP CLIENTE
 @main.route("/setup_cliente", methods=["GET"], strict_slashes=False)
 def setup_cliente():
     print("🔥🔥🔥 SETUP_CLIENTE HIT 🔥🔥🔥")
 
-    from database import conectar, guardar_respuesta
+    from database import conectar
 
     numero = request.args.get("numero")
 
@@ -120,7 +123,6 @@ def setup_cliente():
         conn.commit()
         conn.close()
 
-        # 🔥 RESPUESTAS
         guardar_respuesta(numero, "hola",
             "🐶 ¡Hola! Bienvenido a *Peluquería Canina 🐾*\n\n"
             "1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita\n4️⃣ Ubicación"
@@ -138,21 +140,77 @@ def setup_cliente():
         return f"❌ ERROR: {str(e)}"
 
 
+# 🔥 PANEL VER RESPUESTAS
+@main.route("/respuestas")
+def ver_respuestas():
+    numero = request.args.get("numero")
+
+    if not numero:
+        return "❌ Falta parámetro numero"
+
+    numero = normalizar_numero(numero)
+
+    datos = obtener_respuestas(numero)
+
+    html = f"<h2>📋 Respuestas de {numero}</h2><hr>"
+
+    for palabra, respuesta in datos:
+        html += f"""
+        <b>{palabra}</b> → {respuesta}<br>
+        <a href="/eliminar?numero={numero}&palabra={palabra}">❌ Eliminar</a>
+        <hr>
+        """
+
+    return html
+
+
+# 🔥 AGREGAR RESPUESTA
+@main.route("/agregar")
+def agregar():
+    numero = request.args.get("numero")
+    palabra = request.args.get("palabra")
+    respuesta = request.args.get("respuesta")
+
+    if not numero or not palabra or not respuesta:
+        return "❌ Faltan parámetros"
+
+    numero = normalizar_numero(numero)
+
+    guardar_respuesta(numero, palabra, respuesta)
+
+    return "✅ Guardado"
+
+
+# 🔥 ELIMINAR RESPUESTA
+@main.route("/eliminar")
+def eliminar():
+    numero = request.args.get("numero")
+    palabra = request.args.get("palabra")
+
+    if not numero or not palabra:
+        return "❌ Faltan parámetros"
+
+    eliminar_respuesta(numero, palabra)
+
+    return "✅ Eliminado"
+
+
 # 🔥 WEBHOOK
 @main.route("/webhook", methods=["POST"])
 def webhook():
     print("🔥 WEBHOOK HIT 🔥")
 
     try:
-        user_number = request.form.get("From", "")
-        numero_twilio = request.form.get("To", "")
+        user_number_raw = request.form.get("From", "")
+        numero_twilio_raw = request.form.get("To", "")
         incoming_msg = request.form.get("Body", "").strip().lower()
 
-        negocio = normalizar_numero(numero_twilio)
+        user_number = normalizar_numero(user_number_raw)
+        negocio = normalizar_numero(numero_twilio_raw)
 
-        print("NEGOCIO:", negocio)
-        print("USUARIO:", user_number)
-        print("MENSAJE:", incoming_msg)
+        print("📌 NEGOCIO:", negocio)
+        print("👤 USUARIO:", user_number)
+        print("💬 MENSAJE:", incoming_msg)
 
         registrar_cliente(user_number, negocio)
         guardar_usuario(user_number, incoming_msg, negocio)
@@ -160,12 +218,18 @@ def webhook():
         resp = MessagingResponse()
         msg = resp.message()
 
+        # 🔥 RESPUESTA + FALLBACK
         respuesta = obtener_respuesta(negocio, incoming_msg)
 
-        if respuesta:
-            msg.body(respuesta)
-        else:
-            msg.body("🐶 Escribe 'hola'")
+        print("🧠 RESPUESTA DB:", respuesta)
+
+        if not respuesta:
+            respuesta = obtener_respuesta(negocio, "hola")
+
+        if not respuesta:
+            respuesta = "🐶 Escribe 'hola' para comenzar"
+
+        msg.body(respuesta)
 
         return str(resp)
 

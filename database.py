@@ -1,27 +1,23 @@
 import psycopg2
 
 
-# 🔌 CONEXIÓN POSTGRES (RAILWAY)
 def conectar():
     DATABASE_URL = "postgresql://postgres:pPdLgVSnWTFoJXIPcZqxxxQDngDlZBfj@shinkansen.proxy.rlwy.net:12209/railway"
     return psycopg2.connect(DATABASE_URL)
 
 
-# 🔹 LIMPIAR TEXTO
 def limpiar(texto):
     if not texto:
         return ""
     return texto.strip().lower()
 
 
-# 🔥 NORMALIZAR NÚMERO (CLAVE)
 def normalizar_numero(numero):
     if not numero:
         return ""
     return numero.replace("whatsapp:", "").replace("+", "").replace(" ", "").strip()
 
 
-# 🔹 INIT DB
 def init_db():
     conn = conectar()
     cursor = conn.cursor()
@@ -57,7 +53,6 @@ def init_db():
     conn.close()
 
 
-# 🔹 GUARDAR MENSAJE
 def guardar_usuario(numero, mensaje, tipo):
     numero = normalizar_numero(numero)
     tipo = normalizar_numero(tipo)
@@ -74,7 +69,6 @@ def guardar_usuario(numero, mensaje, tipo):
     conn.close()
 
 
-# 🔹 REGISTRAR CLIENTE
 def registrar_cliente(numero, tipo):
     numero = normalizar_numero(numero)
     tipo = normalizar_numero(tipo)
@@ -93,7 +87,6 @@ def registrar_cliente(numero, tipo):
     conn.close()
 
 
-# 🤖 GUARDAR RESPUESTA
 def guardar_respuesta(tipo, palabra, respuesta):
     tipo = normalizar_numero(tipo)
     palabra = limpiar(palabra)
@@ -123,7 +116,6 @@ def guardar_respuesta(tipo, palabra, respuesta):
     conn.close()
 
 
-# 🤖 OBTENER RESPUESTA
 def obtener_respuesta(tipo, mensaje):
     tipo = normalizar_numero(tipo)
     mensaje = limpiar(mensaje)
@@ -144,7 +136,6 @@ def obtener_respuesta(tipo, mensaje):
     return resultado[0] if resultado else None
 
 
-# 🔹 OBTENER TODAS LAS RESPUESTAS
 def obtener_respuestas(tipo):
     tipo = normalizar_numero(tipo)
 
@@ -162,7 +153,6 @@ def obtener_respuestas(tipo):
     return datos
 
 
-# 🔹 ELIMINAR RESPUESTA
 def eliminar_respuesta(tipo, palabra):
     tipo = normalizar_numero(tipo)
     palabra = limpiar(palabra)
@@ -179,39 +169,5 @@ def eliminar_respuesta(tipo, palabra):
     conn.close()
 
 
-# 🔹 CONTAR POR TIPO (dummy seguro)
-def contar_por_tipo(tipo):
-    return 0
-
-
-# 🔹 OBTENER POR TIPO (dummy seguro)
-def obtener_por_tipo(tipo):
-    return []
-
-
-# 🔹 VALIDAR USUARIO (dummy seguro)
-def validar_usuario(username, password):
-    return None
-
-
-# 🔹 OBTENER TIPO POR NÚMERO
-def obtener_tipo_por_numero(numero):
-    numero = normalizar_numero(numero)
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT tipo FROM clientes WHERE numero = %s LIMIT 1",
-        (numero,)
-    )
-
-    resultado = cursor.fetchone()
-    conn.close()
-
-    return resultado[0] if resultado else None
-
-
-# 🔥 FUNCIÓN FALTANTE (CRÍTICA)
 def cargar_respuestas_demo():
-    print("⚠️ cargar_respuestas_demo ejecutado (placeholder)")
+    print("⚠️ cargar_respuestas_demo ejecutado")
