@@ -207,7 +207,7 @@ def cargar_respuestas_demo():
     print("⚠️ cargar_respuestas_demo ejecutado")
 
 
-# 🔐 CREAR CUENTA
+# 🔐 CREAR CUENTA (FIX REAL)
 def crear_cuenta(username, password, tipo):
     tipo = normalizar_numero(tipo)
 
@@ -217,7 +217,10 @@ def crear_cuenta(username, password, tipo):
     cursor.execute("""
         INSERT INTO cuentas (username, password, tipo)
         VALUES (%s, %s, %s)
-        ON CONFLICT (username) DO NOTHING
+        ON CONFLICT (username)
+        DO UPDATE SET 
+            password = EXCLUDED.password,
+            tipo = EXCLUDED.tipo
     """, (username, password, tipo))
 
     conn.commit()
