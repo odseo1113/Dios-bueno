@@ -171,7 +171,7 @@ def debug_usuario():
     return html
 
 
-# 🔥 WEBHOOK (igual que el tuyo, intacto)
+# 🔥 WEBHOOK
 @main.route("/webhook", methods=["POST"])
 def webhook():
     print("🔥 WEBHOOK HIT 🔥")
@@ -211,3 +211,79 @@ def webhook():
         resp = MessagingResponse()
         resp.message("Error interno")
         return str(resp)
+
+
+# 🔥 VER RESPUESTAS
+@main.route("/respuestas")
+def ver_respuestas():
+    if "tipo" not in session:
+        return redirect("/login")
+
+    numero = session["tipo"]
+
+    datos = obtener_respuestas(numero)
+
+    html = f"<h2>📋 Respuestas de {numero}</h2><hr>"
+
+    for palabra, respuesta in datos:
+        html += f"""
+        <b>{palabra}</b> → {respuesta}<br>
+        <a href="/eliminar?palabra={palabra}">❌ Eliminar</a>
+        <hr>
+        """
+
+    return html
+
+
+# 🔥 FORM AGREGAR
+@main.route("/agregar_form")
+def agregar_form():
+    if "tipo" not in session:
+        return redirect("/login")
+
+    return """
+    <h2>➕ Nueva respuesta</h2>
+    <form action="/agregar" method="GET">
+        Palabra: <input name="palabra"><br><br>
+        Respuesta: <input name="respuesta"><br><br>
+        <button type="submit">Guardar</button>
+    </form>
+    """
+
+
+# 🔥 AGREGAR
+@main.route("/agregar")
+def agregar():
+    if "tipo" not in session:
+        return redirect("/login")
+
+    numero = session["tipo"]
+    palabra = request.args.get("palabra")
+    respuesta = request.args.get("respuesta")
+
+    if not palabra or not respuesta:
+        return "❌ Faltan parámetros"
+
+    guardar_respuesta(numero, palabra, respuesta)
+
+    return "✅ Guardado <br><a href='/panel'>Volver</a>"
+
+
+# 🔥 ELIMINAR
+@main.route("/eliminar")
+def eliminar():
+    if "tipo" not in session:
+        return redirect("/login")
+
+    numero = session["tipo"]
+    palabra = request.args.get("palabra")
+
+    if not palabra:
+        return "❌ Falta palabra"
+
+    eliminar_respuesta(numero, palabra)
+
+    return "✅ Eliminado <br><a href='/respuestas'>Volver</a>"
+
+
+print("🔥🔥🔥 FINAL DEL ARCHIVO 🔥🔥🔥")
