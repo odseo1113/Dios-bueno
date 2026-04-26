@@ -119,7 +119,7 @@ def cargar():
     return "✅ Respuestas cargadas"
 
 
-# 🔥 SETUP (FIX REAL)
+# 🔥 SETUP (FIX REAL DEFINITIVO)
 @main.route("/setup")
 def setup():
     from database import conectar
@@ -128,8 +128,20 @@ def setup():
         conn = conectar()
         cursor = conn.cursor()
 
+        # 🔥 CREAR TABLA CUENTAS SI NO EXISTE
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cuentas (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            tipo TEXT
+        )
+        """)
+
+        # 🔥 LIMPIAR RESPUESTAS
         cursor.execute("DELETE FROM respuestas")
 
+        # 🔥 CREAR / ACTUALIZAR ADMIN
         cursor.execute("""
             INSERT INTO cuentas (username, password, tipo)
             VALUES (%s, %s, %s)
@@ -140,7 +152,7 @@ def setup():
         conn.commit()
         conn.close()
 
-        return "✅ SETUP OK (ACTUALIZA SI EXISTE)"
+        return "✅ SETUP OK (ADMIN LISTO Y DB SEGURA)"
 
     except Exception as e:
         print("❌ ERROR SETUP:", e)
