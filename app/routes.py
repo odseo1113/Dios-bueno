@@ -15,8 +15,8 @@ from database import (
 # 🔥 DEBUG
 print("🚀 VERSION NUEVA DEPLOYADA")
 print("🔥 ROUTES CARGADO")
-print("🔥 LOGIN ACTIVADO 🔥")
 print("🔥 ARCHIVO ROUTES REAL:", __file__)
+print("🔥 LOGIN + DEBUG DB ACTIVADO")
 
 main = Blueprint('main', __name__)
 
@@ -91,6 +91,27 @@ def panel():
     """
 
 
+# 🔥 DEBUG USUARIO (VER DB REAL)
+@main.route("/debug_usuario")
+def debug_usuario():
+    from database import conectar
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT username, tipo FROM cuentas")
+    datos = cursor.fetchall()
+
+    conn.close()
+
+    html = "<h2>👀 Usuarios en DB</h2><hr>"
+
+    for user, tipo in datos:
+        html += f"{user} → {tipo}<br>"
+
+    return html
+
+
 # 🔥 CARGAR RESPUESTAS
 @main.route("/cargar")
 def cargar():
@@ -98,7 +119,7 @@ def cargar():
     return "✅ Respuestas cargadas"
 
 
-# 🔥 SETUP
+# 🔥 SETUP (FIX REAL)
 @main.route("/setup")
 def setup():
     from database import conectar
@@ -112,13 +133,14 @@ def setup():
         cursor.execute("""
             INSERT INTO cuentas (username, password, tipo)
             VALUES (%s, %s, %s)
-            ON CONFLICT (username) DO NOTHING
+            ON CONFLICT (username)
+            DO UPDATE SET tipo = EXCLUDED.tipo
         """, ("admin", "1234", "14155238886"))
 
         conn.commit()
         conn.close()
 
-        return "✅ SETUP OK"
+        return "✅ SETUP OK (ACTUALIZA SI EXISTE)"
 
     except Exception as e:
         print("❌ ERROR SETUP:", e)
@@ -189,7 +211,7 @@ def setup_cliente():
         return f"❌ ERROR: {str(e)}"
 
 
-# 🔥 VER RESPUESTAS (CON SESSION)
+# 🔥 VER RESPUESTAS
 @main.route("/respuestas")
 def ver_respuestas():
     if "tipo" not in session:
@@ -262,7 +284,7 @@ def eliminar():
     return "✅ Eliminado <br><a href='/respuestas'>Volver</a>"
 
 
-# 🔥 WEBHOOK (NO TOCAR LÓGICA BASE)
+# 🔥 WEBHOOK
 @main.route("/webhook", methods=["POST"])
 def webhook():
     print("🔥 WEBHOOK HIT 🔥")
