@@ -6,7 +6,12 @@ print("🔥🔥🔥 INIT REAL EJECUTADO 🔥🔥🔥")
 def create_app():
     app = Flask(__name__)
 
+    # 🔐 CLAVE PARA SESIONES (LOGIN)
     app.secret_key = "superclave123"
+
+    # 🔥 RECOMENDADO PARA PRODUCCIÓN (EVITA PROBLEMAS DE SESIÓN EN RAILWAY)
+    app.config["SESSION_COOKIE_SECURE"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     # 🔥 Inicializar DB UNA SOLA VEZ
     with app.app_context():
