@@ -11,8 +11,13 @@ from database import (
     eliminar_respuesta,
     validar_usuario,
     crear_cuenta,
-    conectar  # 🔥 movido aquí (mejor práctica)
+    conectar
 )
+
+import os
+
+# 🔒 CLAVE SECRETA PARA SETUP
+SETUP_SECRET = os.getenv("SETUP_SECRET", "dev_secret_123")
 
 # 🔥 DEBUG
 print("🚀 VERSION NUEVA DEPLOYADA")
@@ -23,7 +28,7 @@ print("🔥 LOGIN + DEBUG DB ACTIVADO")
 main = Blueprint('main', __name__)
 
 
-# 🔥 TEST NUEVO (para verificar deploy)
+# 🔥 TEST NUEVO
 @main.route("/soy_nuevo")
 def soy_nuevo():
     return "🔥 NUEVA RUTA 🔥"
@@ -49,11 +54,17 @@ def ping():
 
 
 # =========================
-# 🔥 SETUP (FIX REAL)
+# 🔥 SETUP PROTEGIDO
 # =========================
 @main.route("/setup")
 def setup():
     print("🔥 SETUP HIT 🔥")
+
+    # 🔒 PROTECCIÓN POR CLAVE
+    secret = request.args.get("key")
+
+    if secret != SETUP_SECRET:
+        return "❌ No autorizado", 403
 
     try:
         conn = conectar()
@@ -68,7 +79,7 @@ def setup():
         )
         """)
 
-        # 🔥 FIX: evitar error si tabla no existe
+        # 🔥 evitar error si tabla no existe
         try:
             cursor.execute("DELETE FROM respuestas")
         except Exception as e:
@@ -117,25 +128,34 @@ def registro_form():
 def registro():
     username = request.form.get("username")
     password = request.form.get("password")
-    numero = request.form.get("numero")
+    numero_cliente = request.form.get("numero")
 
-    if not username or not password or not numero:
+    if not username or not password or not numero_cliente:
         return "❌ Faltan datos"
 
-    numero = normalizar_numero(numero)
+    numero_cliente = normalizar_numero(numero_cliente)
+
+    # 🔥 ESTE ES EL NÚMERO REAL DEL BOT (TWILIO)
+    numero_twilio = "14155238886"  # luego lo automatizamos
 
     try:
-        crear_cuenta(username, password, numero)
+        # 🔥 ahora guardas ambos correctamente
+        crear_cuenta(username, password, numero_twilio, numero_cliente)
 
-        guardar_respuesta(numero, "hola",
+        # 🔥 TODAS LAS RESPUESTAS SE GUARDAN CON EL TWILIO (CLAVE)
+        guardar_respuesta(numero_twilio, "hola",
             "👋 ¡Hola! Bienvenido\n\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"
         )
-        guardar_respuesta(numero, "1", "📋 Lista de servicios")
-        guardar_respuesta(numero, "2", "💰 Consulta precios")
-        guardar_respuesta(numero, "3", "📅 Agenda tu cita")
+        guardar_respuesta(numero_twilio, "1", "📋 Lista de servicios")
+        guardar_respuesta(numero_twilio, "2", "💰 Consulta precios")
+        guardar_respuesta(numero_twilio, "3", "📅 Agenda tu cita")
 
-        return """
+        return f"""
         ✅ Usuario creado correctamente<br><br>
+
+        📱 Tu número de atención es:<br>
+        <b>+{numero_twilio}</b><br><br>
+
         <a href="/login">🔐 Ir a login</a>
         """
 

@@ -13,11 +13,11 @@ def create_app():
     app.config["SESSION_COOKIE_SECURE"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-    # 🔥 Inicializar DB UNA SOLA VEZ
+    # 🔥 Inicializar DB (AQUÍ YA SE CREA TODO: tablas + pool)
     with app.app_context():
         try:
             init_db()
-            print("✅ Base de datos inicializada correctamente")
+            print("✅ Base de datos inicializada correctamente (incluye pool Twilio)")
         except Exception as e:
             print("❌ ERROR init_db:", e)
 

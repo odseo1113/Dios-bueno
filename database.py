@@ -53,13 +53,28 @@ def init_db():
     )
     """)
 
-    # 🔥 TABLA CUENTAS (TE FALTABA ASEGURARLA)
+    # 🔥 TABLA CUENTAS
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS cuentas (
         id SERIAL PRIMARY KEY,
         username TEXT UNIQUE,
         password TEXT,
         tipo TEXT
+    )
+    """)
+
+    # 🔥 NUEVA COLUMNA (NO ROMPE)
+    try:
+        cursor.execute("ALTER TABLE cuentas ADD COLUMN numero_cliente TEXT")
+    except Exception:
+        pass
+
+    # 🔥 NUEVA TABLA: POOL DE NÚMEROS TWILIO
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS numeros_twilio (
+        id SERIAL PRIMARY KEY,
+        numero TEXT UNIQUE,
+        en_uso BOOLEAN DEFAULT FALSE
     )
     """)
 
@@ -133,7 +148,7 @@ def guardar_respuesta(tipo, palabra, respuesta):
     conn.close()
 
 
-# 🤖 OBTENER RESPUESTA (MEJORADO 🔥)
+# 🤖 OBTENER RESPUESTA
 def obtener_respuesta(tipo, mensaje):
     tipo = normalizar_numero(tipo)
     mensaje = limpiar(mensaje)
@@ -141,7 +156,6 @@ def obtener_respuesta(tipo, mensaje):
     conn = conectar()
     cursor = conn.cursor()
 
-    # 🔥 1. MATCH EXACTO (PRIORIDAD)
     cursor.execute("""
         SELECT respuesta 
         FROM respuestas 
@@ -151,7 +165,6 @@ def obtener_respuesta(tipo, mensaje):
 
     resultado = cursor.fetchone()
 
-    # 🔥 2. MATCH FLEXIBLE (MEJORADO)
     if not resultado:
         cursor.execute("""
             SELECT respuesta 
@@ -202,26 +215,28 @@ def eliminar_respuesta(tipo, palabra):
     conn.close()
 
 
-# 🔥 DEMO (NO ROMPE NADA)
+# 🔥 DEMO
 def cargar_respuestas_demo():
     print("⚠️ cargar_respuestas_demo ejecutado")
 
 
-# 🔐 CREAR CUENTA (FIX REAL)
-def crear_cuenta(username, password, tipo):
-    tipo = normalizar_numero(tipo)
+# 🔐 CREAR CUENTA
+def crear_cuenta(username, password, numero_twilio, numero_cliente=None):
+    numero_twilio = normalizar_numero(numero_twilio)
+    numero_cliente = normalizar_numero(numero_cliente)
 
     conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO cuentas (username, password, tipo)
-        VALUES (%s, %s, %s)
+        INSERT INTO cuentas (username, password, tipo, numero_cliente)
+        VALUES (%s, %s, %s, %s)
         ON CONFLICT (username)
         DO UPDATE SET 
             password = EXCLUDED.password,
-            tipo = EXCLUDED.tipo
-    """, (username, password, tipo))
+            tipo = EXCLUDED.tipo,
+            numero_cliente = EXCLUDED.numero_cliente
+    """, (username, password, numero_twilio, numero_cliente))
 
     conn.commit()
     conn.close()
@@ -242,3 +257,51 @@ def validar_usuario(username, password):
     conn.close()
 
     return resultado[0] if resultado else None
+
+
+# =========================
+# 🔥 POOL DE NÚMEROS TWILIO
+# =========================
+
+def obtener_numero_disponible():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, numero FROM numeros_twilio
+        WHERE en_uso = FALSE
+        LIMIT 1
+    """)
+
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        conn.close()
+        raise Exception("❌ No hay números disponibles")
+
+    id_numero, numero = resultado
+
+    cursor.execute("""
+        UPDATE numeros_twilio
+        SET en_uso = TRUE
+        WHERE id = %s
+    """, (id_numero,))
+
+    conn.commit()
+    conn.close()
+
+    return numero
+
+
+def liberar_numero(numero):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE numeros_twilio
+        SET en_uso = FALSE
+        WHERE numero = %s
+    """, (numero,))
+
+    conn.commit()
+    conn.close()
