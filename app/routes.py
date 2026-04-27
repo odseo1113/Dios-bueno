@@ -10,7 +10,7 @@ from database import (
     obtener_respuestas,
     eliminar_respuesta,
     validar_usuario,
-    crear_cuenta   # 🔥 NUEVO
+    crear_cuenta
 )
 
 # 🔥 DEBUG
@@ -22,10 +22,16 @@ print("🔥 LOGIN + DEBUG DB ACTIVADO")
 main = Blueprint('main', __name__)
 
 
+# 🔥 TEST NUEVO (para verificar deploy)
+@main.route("/soy_nuevo")
+def soy_nuevo():
+    return "🔥 NUEVA RUTA 🔥"
+
+
 # 🔥 TEST
 @main.route("/test")
 def test():
-    return "FUNCIONANDO TEST 123"
+    return "🔥 TEST MODIFICADO 🔥"
 
 
 # 🔹 HOME
@@ -42,9 +48,49 @@ def ping():
 
 
 # =========================
-# 🔥 REGISTRO (NUEVO)
+# 🔥 SETUP (FIX REAL)
 # =========================
+@main.route("/setup")
+def setup():
+    print("🔥 SETUP HIT 🔥")
 
+    from database import conectar
+
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cuentas (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            tipo TEXT
+        )
+        """)
+
+        cursor.execute("DELETE FROM respuestas")
+
+        cursor.execute("""
+            INSERT INTO cuentas (username, password, tipo)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (username)
+            DO UPDATE SET tipo = EXCLUDED.tipo
+        """, ("admin", "1234", "14155238886"))
+
+        conn.commit()
+        conn.close()
+
+        return "✅ SETUP OK"
+
+    except Exception as e:
+        print("❌ ERROR SETUP:", e)
+        return f"❌ ERROR: {str(e)}"
+
+
+# =========================
+# 🔥 REGISTRO
+# =========================
 @main.route("/registro")
 def registro_form():
     return """
@@ -76,10 +122,8 @@ def registro():
     numero = normalizar_numero(numero)
 
     try:
-        # 🔥 CREA USUARIO
         crear_cuenta(username, password, numero)
 
-        # 🔥 AUTO CONFIGURAR BOT
         guardar_respuesta(numero, "hola",
             "👋 ¡Hola! Bienvenido\n\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"
         )
@@ -100,7 +144,6 @@ def registro():
 # =========================
 # 🔐 LOGIN
 # =========================
-
 @main.route("/login", methods=["GET"])
 def login_form():
     return """
