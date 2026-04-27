@@ -10,7 +10,8 @@ from database import (
     obtener_respuestas,
     eliminar_respuesta,
     validar_usuario,
-    crear_cuenta
+    crear_cuenta,
+    conectar  # 🔥 movido aquí (mejor práctica)
 )
 
 # 🔥 DEBUG
@@ -54,8 +55,6 @@ def ping():
 def setup():
     print("🔥 SETUP HIT 🔥")
 
-    from database import conectar
-
     try:
         conn = conectar()
         cursor = conn.cursor()
@@ -69,7 +68,11 @@ def setup():
         )
         """)
 
-        cursor.execute("DELETE FROM respuestas")
+        # 🔥 FIX: evitar error si tabla no existe
+        try:
+            cursor.execute("DELETE FROM respuestas")
+        except Exception as e:
+            print("⚠️ No se pudo limpiar respuestas:", e)
 
         cursor.execute("""
             INSERT INTO cuentas (username, password, tipo)
@@ -196,8 +199,6 @@ def panel():
 # 🔥 DEBUG USUARIO
 @main.route("/debug_usuario")
 def debug_usuario():
-    from database import conectar
-
     conn = conectar()
     cursor = conn.cursor()
 
