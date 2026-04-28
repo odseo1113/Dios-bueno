@@ -220,6 +220,39 @@ def cargar_respuestas_demo():
     print("⚠️ cargar_respuestas_demo ejecutado")
 
 
+# =========================
+# 🔥 OBTENER NÚMERO DISPONIBLE (POOL TWILIO)
+# =========================
+def obtener_numero_disponible():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT numero FROM numeros_twilio
+        WHERE en_uso = FALSE
+        LIMIT 1
+    """)
+
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        conn.close()
+        return None
+
+    numero = resultado[0]
+
+    cursor.execute("""
+        UPDATE numeros_twilio
+        SET en_uso = TRUE
+        WHERE numero = %s
+    """, (numero,))
+
+    conn.commit()
+    conn.close()
+
+    return numero
+
+
 # 🔐 CREAR CUENTA
 def crear_cuenta(username, password, numero_twilio, numero_cliente=None):
     numero_twilio = normalizar_numero(numero_twilio)

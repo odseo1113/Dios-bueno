@@ -126,6 +126,8 @@ def registro_form():
 
 @main.route("/registro", methods=["POST"])
 def registro():
+    from database import obtener_numero_disponible  # 🔥 IMPORT LOCAL (SEGURO)
+
     username = request.form.get("username")
     password = request.form.get("password")
     numero_cliente = request.form.get("numero")
@@ -135,8 +137,11 @@ def registro():
 
     numero_cliente = normalizar_numero(numero_cliente)
 
-    # 🔥 ESTE ES EL NÚMERO REAL DEL BOT (TWILIO)
-    numero_twilio = "14155238886"  # luego lo automatizamos
+    # 🔥 AQUÍ ESTÁ EL CAMBIO IMPORTANTE
+    numero_twilio = obtener_numero_disponible()
+
+    if not numero_twilio:
+        return "❌ No hay números disponibles, contacta soporte"
 
     try:
         # 🔥 ahora guardas ambos correctamente
