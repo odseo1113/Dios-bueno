@@ -11,7 +11,8 @@ from database import (
     eliminar_respuesta,
     validar_usuario,
     crear_cuenta,
-    conectar
+    conectar,
+    eliminar_cliente  # 🔥 IMPORT CORRECTO AQUÍ
 )
 
 import os
@@ -60,7 +61,6 @@ def ping():
 def setup():
     print("🔥 SETUP HIT 🔥")
 
-    # 🔒 PROTECCIÓN POR CLAVE
     secret = request.args.get("key")
 
     if secret != SETUP_SECRET:
@@ -79,7 +79,6 @@ def setup():
         )
         """)
 
-        # 🔥 evitar error si tabla no existe
         try:
             cursor.execute("DELETE FROM respuestas")
         except Exception as e:
@@ -126,7 +125,7 @@ def registro_form():
 
 @main.route("/registro", methods=["POST"])
 def registro():
-    from database import obtener_numero_disponible  # 🔥 IMPORT LOCAL (SEGURO)
+    from database import obtener_numero_disponible  # 🔥 IMPORT LOCAL
 
     username = request.form.get("username")
     password = request.form.get("password")
@@ -137,17 +136,14 @@ def registro():
 
     numero_cliente = normalizar_numero(numero_cliente)
 
-    # 🔥 AQUÍ ESTÁ EL CAMBIO IMPORTANTE
     numero_twilio = obtener_numero_disponible()
 
     if not numero_twilio:
         return "❌ No hay números disponibles, contacta soporte"
 
     try:
-        # 🔥 ahora guardas ambos correctamente
         crear_cuenta(username, password, numero_twilio, numero_cliente)
 
-        # 🔥 TODAS LAS RESPUESTAS SE GUARDAN CON EL TWILIO (CLAVE)
         guardar_respuesta(numero_twilio, "hola",
             "👋 ¡Hola! Bienvenido\n\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"
         )
@@ -240,19 +236,15 @@ def debug_usuario():
     return html
 
 
-# 🔥 WEBHOOK
+# 🔥 WEBHOOK (CLAVE DEL NEGOCIO)
 @main.route("/webhook", methods=["POST"])
 def webhook():
     print("🔥 WEBHOOK HIT 🔥")
 
     try:
-        user_number_raw = request.form.get("From", "")
-        numero_twilio_raw = request.form.get("To", "")
-        incoming_msg_raw = request.form.get("Body", "")
-
-        user_number = normalizar_numero(user_number_raw)
-        negocio = normalizar_numero(numero_twilio_raw)
-        incoming_msg = incoming_msg_raw.strip().lower()
+        user_number = normalizar_numero(request.form.get("From", ""))
+        negocio = normalizar_numero(request.form.get("To", ""))
+        incoming_msg = (request.form.get("Body", "") or "").strip().lower()
 
         if not incoming_msg:
             incoming_msg = "hola"
@@ -263,13 +255,9 @@ def webhook():
         resp = MessagingResponse()
         msg = resp.message()
 
-        respuesta = obtener_respuesta(negocio, incoming_msg)
-
-        if not respuesta:
-            respuesta = obtener_respuesta(negocio, "hola")
-
-        if not respuesta:
-            respuesta = "🐶 Escribe 'hola' para comenzar"
+        respuesta = obtener_respuesta(negocio, incoming_msg) \
+                    or obtener_respuesta(negocio, "hola") \
+                    or "🐶 Escribe 'hola' para comenzar"
 
         msg.body(respuesta)
 
@@ -289,7 +277,6 @@ def ver_respuestas():
         return redirect("/login")
 
     numero = session["tipo"]
-
     datos = obtener_respuestas(numero)
 
     html = f"<h2>📋 Respuestas de {numero}</h2><hr>"
@@ -338,7 +325,7 @@ def agregar():
     return "✅ Guardado <br><a href='/panel'>Volver</a>"
 
 
-# 🔥 ELIMINAR
+# 🔥 ELIMINAR RESPUESTA
 @main.route("/eliminar")
 def eliminar():
     if "tipo" not in session:
@@ -353,6 +340,25 @@ def eliminar():
     eliminar_respuesta(numero, palabra)
 
     return "✅ Eliminado <br><a href='/respuestas'>Volver</a>"
+
+
+# 🔥 ELIMINAR CLIENTE (LIBERA NÚMERO)
+@main.route("/eliminar_cliente")
+def eliminar_cliente_route():
+    if "tipo" not in session:
+        return redirect("/login")
+
+    username = request.args.get("username")
+
+    if not username:
+        return "❌ Falta username"
+
+    ok = eliminar_cliente(username)
+
+    if not ok:
+        return "❌ Cliente no encontrado"
+
+    return "✅ Cliente eliminado y número liberado"
 
 
 print("🔥🔥🔥 FINAL DEL ARCHIVO 🔥🔥🔥")

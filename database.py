@@ -326,7 +326,42 @@ def obtener_numero_disponible():
     return numero
 
 
+# 🔥 OBTENER NÚMERO DISPONIBLE (POOL TWILIO)
+def obtener_numero_disponible():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT numero FROM numeros_twilio
+        WHERE en_uso = FALSE
+        LIMIT 1
+    """)
+
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        conn.close()
+        return None
+
+    numero = normalizar_numero(resultado[0])
+
+    # 🔥 marcar como ocupado
+    cursor.execute("""
+        UPDATE numeros_twilio
+        SET en_uso = TRUE
+        WHERE numero = %s
+    """, (numero,))
+
+    conn.commit()
+    conn.close()
+
+    return numero
+
+
+# 🔓 LIBERAR NÚMERO
 def liberar_numero(numero):
+    numero = normalizar_numero(numero)
+
     conn = conectar()
     cursor = conn.cursor()
 
@@ -338,3 +373,46 @@ def liberar_numero(numero):
 
     conn.commit()
     conn.close()
+
+
+# 🔥 ELIMINAR CLIENTE + LIBERAR NÚMERO
+def eliminar_cliente(username):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    # 🔥 1. obtener número asignado (tipo = numero_twilio)
+    cursor.execute("""
+        SELECT tipo FROM cuentas
+        WHERE username = %s
+        LIMIT 1
+    """, (username,))
+
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        conn.close()
+        return False
+
+    numero = normalizar_numero(resultado[0])
+
+    # 🔥 2. liberar número
+    cursor.execute("""
+        UPDATE numeros_twilio
+        SET en_uso = FALSE
+        WHERE numero = %s
+    """, (numero,))
+
+    # 🔥 3. eliminar cuenta
+    cursor.execute("""
+        DELETE FROM cuentas
+        WHERE username = %s
+    """, (username,))
+
+    conn.commit()
+    conn.close()
+
+    return True
+
+
+
+    
