@@ -1,10 +1,9 @@
 import psycopg2
 
 
-# 🔌 CONEXIÓN POSTGRES (RAILWAY)
 def conectar():
-    DATABASE_URL = "postgresql://postgres:pPdLgVSnWTFoJXIPcZqxxxQDngDlZBfj@shinkansen.proxy.rlwy.net:12209/railway"
-    return psycopg2.connect(DATABASE_URL)
+    import os
+    return psycopg2.connect(os.getenv("DATABASE_URL"))
 
 
 # 🔹 LIMPIAR TEXTO
@@ -21,65 +20,71 @@ def normalizar_numero(numero):
     return numero.replace("whatsapp:", "").replace("+", "").replace(" ", "").strip()
 
 
-# 🔹 INIT DB
+# 🔹 INIT DB (CORREGIDO 🔥)
 def init_db():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id SERIAL PRIMARY KEY,
-        numero TEXT,
-        mensaje TEXT,
-        tipo TEXT,
-        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS clientes (
-        id SERIAL PRIMARY KEY,
-        numero TEXT UNIQUE,
-        tipo TEXT
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS respuestas (
-        id SERIAL PRIMARY KEY,
-        tipo TEXT,
-        palabra TEXT,
-        respuesta TEXT
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS cuentas (
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE,
-        password TEXT,
-        tipo TEXT
-    )
-    """)
-
-    # 🔥 FIX IMPORTANTE (rollback)
     try:
-        cursor.execute("ALTER TABLE cuentas ADD COLUMN numero_cliente TEXT")
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id SERIAL PRIMARY KEY,
+            numero TEXT,
+            mensaje TEXT,
+            tipo TEXT,
+            fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS clientes (
+            id SERIAL PRIMARY KEY,
+            numero TEXT UNIQUE,
+            tipo TEXT
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS respuestas (
+            id SERIAL PRIMARY KEY,
+            tipo TEXT,
+            palabra TEXT,
+            respuesta TEXT
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cuentas (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            tipo TEXT
+        )
+        """)
+
+        # 🔥 FIX IMPORTANTE (SIN ROMPER TRANSACCIÓN)
+        try:
+            cursor.execute("ALTER TABLE cuentas ADD COLUMN numero_cliente TEXT")
+        except Exception:
+            conn.rollback()
+            cursor = conn.cursor()  # 🔥 clave: nuevo cursor limpio
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS numeros_twilio (
+            id SERIAL PRIMARY KEY,
+            numero TEXT UNIQUE,
+            en_uso BOOLEAN DEFAULT FALSE
+        )
+        """)
+
         conn.commit()
+
     except Exception as e:
         conn.rollback()
-        print("⚠️ numero_cliente ya existe o error:", e)
+        print("❌ ERROR init_db:", e)
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS numeros_twilio (
-        id SERIAL PRIMARY KEY,
-        numero TEXT UNIQUE,
-        en_uso BOOLEAN DEFAULT FALSE
-    )
-    """)
-
-    conn.commit()
-    conn.close()
+    finally:
+        conn.close()
 
 
 # 🔹 GUARDAR MENSAJE
