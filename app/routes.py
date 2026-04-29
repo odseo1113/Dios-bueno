@@ -12,7 +12,7 @@ from database import (
     validar_usuario,
     crear_cuenta,
     conectar,
-    eliminar_cliente  # 🔥 IMPORT CORRECTO AQUÍ
+    eliminar_cliente
 )
 
 import os
@@ -125,7 +125,7 @@ def registro_form():
 
 @main.route("/registro", methods=["POST"])
 def registro():
-    from database import obtener_numero_disponible  # 🔥 IMPORT LOCAL
+    from database import obtener_numero_disponible
 
     username = request.form.get("username")
     password = request.form.get("password")
@@ -144,20 +144,25 @@ def registro():
     try:
         crear_cuenta(username, password, numero_twilio, numero_cliente)
 
+        # 🔥 MENSAJE PERSONALIZADO (CLAVE PARA VENDER)
         guardar_respuesta(numero_twilio, "hola",
-            "👋 ¡Hola! Bienvenido\n\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Cita"
+            f"👋 Hola, soy el asistente de {username} 🤖\n\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Citas"
         )
         guardar_respuesta(numero_twilio, "1", "📋 Lista de servicios")
         guardar_respuesta(numero_twilio, "2", "💰 Consulta precios")
         guardar_respuesta(numero_twilio, "3", "📅 Agenda tu cita")
 
+        # 🔥 MENSAJE MEJORADO (VENTAS)
         return f"""
-        ✅ Usuario creado correctamente<br><br>
+        ✅ Bot activado correctamente 🚀<br><br>
 
-        📱 Tu número de atención es:<br>
+        📲 Prueba tu asistente ahora:<br>
+        👉 Escríbele a este número en WhatsApp:<br>
         <b>+{numero_twilio}</b><br><br>
 
-        <a href="/login">🔐 Ir a login</a>
+        💡 Escribe "hola" para ver cómo responde automáticamente<br><br>
+
+        <a href="/login">🔐 Ir a mi panel</a>
         """
 
     except Exception as e:
@@ -236,18 +241,30 @@ def debug_usuario():
     return html
 
 
-# 🔥 WEBHOOK (CLAVE DEL NEGOCIO)
+# 🔥 WEBHOOK MULTI-CLIENTE (PRODUCCIÓN)
 @main.route("/webhook", methods=["POST"])
 def webhook():
     print("🔥 WEBHOOK HIT 🔥")
 
     try:
         user_number = normalizar_numero(request.form.get("From", ""))
-        negocio = normalizar_numero(request.form.get("To", ""))
+        numero_twilio = normalizar_numero(request.form.get("To", ""))
         incoming_msg = (request.form.get("Body", "") or "").strip().lower()
 
         if not incoming_msg:
             incoming_msg = "hola"
+
+        # 🔥 IMPORTANTE: detectar negocio por número del cliente
+        from database import obtener_negocio_por_cliente
+
+        negocio = obtener_negocio_por_cliente(user_number)
+
+        # 🔥 fallback si no está registrado (modo demo)
+        if not negocio:
+            negocio = numero_twilio
+
+        print(f"📌 Cliente: {user_number}")
+        print(f"🏢 Negocio detectado: {negocio}")
 
         registrar_cliente(user_number, negocio)
         guardar_usuario(user_number, incoming_msg, negocio)
@@ -255,9 +272,11 @@ def webhook():
         resp = MessagingResponse()
         msg = resp.message()
 
-        respuesta = obtener_respuesta(negocio, incoming_msg) \
-                    or obtener_respuesta(negocio, "hola") \
-                    or "🐶 Escribe 'hola' para comenzar"
+        respuesta = (
+            obtener_respuesta(negocio, incoming_msg)
+            or obtener_respuesta(negocio, "hola")
+            or "👋 Hola, en breve te atendemos"
+        )
 
         msg.body(respuesta)
 
@@ -342,7 +361,7 @@ def eliminar():
     return "✅ Eliminado <br><a href='/respuestas'>Volver</a>"
 
 
-# 🔥 ELIMINAR CLIENTE (LIBERA NÚMERO)
+# 🔥 ELIMINAR CLIENTE
 @main.route("/eliminar_cliente")
 def eliminar_cliente_route():
     if "tipo" not in session:

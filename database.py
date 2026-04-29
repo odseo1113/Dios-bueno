@@ -414,5 +414,25 @@ def eliminar_cliente(username):
     return True
 
 
+# 🔥 OBTENER NEGOCIO POR NÚMERO DE CLIENTE
+def obtener_negocio_por_cliente(numero_cliente):
+    numero_cliente = normalizar_numero(numero_cliente)
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT tipo
+        FROM cuentas
+        WHERE numero_cliente = %s
+        LIMIT 1
+    """, (numero_cliente,))
+
+    resultado = cursor.fetchone()
+    conn.close()
+
+    return resultado[0] if resultado else None
+
+
 
     
