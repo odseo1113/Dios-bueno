@@ -53,7 +53,6 @@ def init_db():
     )
     """)
 
-    # 🔥 TABLA CUENTAS
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS cuentas (
         id SERIAL PRIMARY KEY,
@@ -63,13 +62,14 @@ def init_db():
     )
     """)
 
-    # 🔥 NUEVA COLUMNA (NO ROMPE)
+    # 🔥 FIX IMPORTANTE (rollback)
     try:
         cursor.execute("ALTER TABLE cuentas ADD COLUMN numero_cliente TEXT")
-    except Exception:
-        pass
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print("⚠️ numero_cliente ya existe o error:", e)
 
-    # 🔥 NUEVA TABLA: POOL DE NÚMEROS TWILIO
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS numeros_twilio (
         id SERIAL PRIMARY KEY,
@@ -176,7 +176,6 @@ def obtener_respuesta(tipo, mensaje):
         resultado = cursor.fetchone()
 
     conn.close()
-
     return resultado[0] if resultado else None
 
 
@@ -221,112 +220,9 @@ def cargar_respuestas_demo():
 
 
 # =========================
-# 🔥 OBTENER NÚMERO DISPONIBLE (POOL TWILIO)
-# =========================
-def obtener_numero_disponible():
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT numero FROM numeros_twilio
-        WHERE en_uso = FALSE
-        LIMIT 1
-    """)
-
-    resultado = cursor.fetchone()
-
-    if not resultado:
-        conn.close()
-        return None
-
-    numero = resultado[0]
-
-    cursor.execute("""
-        UPDATE numeros_twilio
-        SET en_uso = TRUE
-        WHERE numero = %s
-    """, (numero,))
-
-    conn.commit()
-    conn.close()
-
-    return numero
-
-
-# 🔐 CREAR CUENTA
-def crear_cuenta(username, password, numero_twilio, numero_cliente=None):
-    numero_twilio = normalizar_numero(numero_twilio)
-    numero_cliente = normalizar_numero(numero_cliente)
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO cuentas (username, password, tipo, numero_cliente)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (username)
-        DO UPDATE SET 
-            password = EXCLUDED.password,
-            tipo = EXCLUDED.tipo,
-            numero_cliente = EXCLUDED.numero_cliente
-    """, (username, password, numero_twilio, numero_cliente))
-
-    conn.commit()
-    conn.close()
-
-
-# 🔐 LOGIN
-def validar_usuario(username, password):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT tipo FROM cuentas
-        WHERE username = %s AND password = %s
-        LIMIT 1
-    """, (username, password))
-
-    resultado = cursor.fetchone()
-    conn.close()
-
-    return resultado[0] if resultado else None
-
-
-# =========================
 # 🔥 POOL DE NÚMEROS TWILIO
 # =========================
 
-def obtener_numero_disponible():
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT id, numero FROM numeros_twilio
-        WHERE en_uso = FALSE
-        LIMIT 1
-    """)
-
-    resultado = cursor.fetchone()
-
-    if not resultado:
-        conn.close()
-        raise Exception("❌ No hay números disponibles")
-
-    id_numero, numero = resultado
-
-    cursor.execute("""
-        UPDATE numeros_twilio
-        SET en_uso = TRUE
-        WHERE id = %s
-    """, (id_numero,))
-
-    conn.commit()
-    conn.close()
-
-    return numero
-
-
-# 🔥 OBTENER NÚMERO DISPONIBLE (POOL TWILIO)
 def obtener_numero_disponible():
     conn = conectar()
     cursor = conn.cursor()
@@ -345,7 +241,6 @@ def obtener_numero_disponible():
 
     numero = normalizar_numero(resultado[0])
 
-    # 🔥 marcar como ocupado
     cursor.execute("""
         UPDATE numeros_twilio
         SET en_uso = TRUE
@@ -358,7 +253,6 @@ def obtener_numero_disponible():
     return numero
 
 
-# 🔓 LIBERAR NÚMERO
 def liberar_numero(numero):
     numero = normalizar_numero(numero)
 
@@ -375,12 +269,11 @@ def liberar_numero(numero):
     conn.close()
 
 
-# 🔥 ELIMINAR CLIENTE + LIBERAR NÚMERO
+# 🔥 ELIMINAR CLIENTE
 def eliminar_cliente(username):
     conn = conectar()
     cursor = conn.cursor()
 
-    # 🔥 1. obtener número asignado (tipo = numero_twilio)
     cursor.execute("""
         SELECT tipo FROM cuentas
         WHERE username = %s
@@ -395,14 +288,12 @@ def eliminar_cliente(username):
 
     numero = normalizar_numero(resultado[0])
 
-    # 🔥 2. liberar número
     cursor.execute("""
         UPDATE numeros_twilio
         SET en_uso = FALSE
         WHERE numero = %s
     """, (numero,))
 
-    # 🔥 3. eliminar cuenta
     cursor.execute("""
         DELETE FROM cuentas
         WHERE username = %s
@@ -414,7 +305,7 @@ def eliminar_cliente(username):
     return True
 
 
-# 🔥 OBTENER NEGOCIO POR NÚMERO DE CLIENTE
+# 🔥 MULTI-NEGOCIO (CLAVE)
 def obtener_negocio_por_cliente(numero_cliente):
     numero_cliente = normalizar_numero(numero_cliente)
 
