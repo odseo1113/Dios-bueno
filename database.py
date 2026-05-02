@@ -73,14 +73,12 @@ def init_db():
         )
         """)
 
-        # 🔥 columna cliente
         try:
             cursor.execute("ALTER TABLE cuentas ADD COLUMN numero_cliente TEXT")
         except Exception:
             conn.rollback()
             cursor = conn.cursor()
 
-        # 🔥 pool twilio
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS numeros_twilio (
             id SERIAL PRIMARY KEY,
@@ -89,7 +87,6 @@ def init_db():
         )
         """)
 
-        # 🔥 NUEVO: CITAS
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS citas (
             id SERIAL PRIMARY KEY,
@@ -101,7 +98,6 @@ def init_db():
         )
         """)
 
-        # 🔥 NUEVO: ESTADO CONVERSACIÓN
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS estados (
             numero TEXT PRIMARY KEY,
@@ -185,7 +181,7 @@ def guardar_respuesta(tipo, palabra, respuesta):
     conn.close()
 
 
-# 🤖 RESPUESTA INTELIGENTE (MEJORADA 🔥)
+# 🤖 RESPUESTA INTELIGENTE
 def obtener_respuesta(tipo, mensaje):
     tipo = normalizar_numero(tipo)
     mensaje = limpiar(mensaje)
@@ -193,7 +189,6 @@ def obtener_respuesta(tipo, mensaje):
     conn = conectar()
     cursor = conn.cursor()
 
-    # exacto
     cursor.execute("""
         SELECT respuesta 
         FROM respuestas 
@@ -203,7 +198,6 @@ def obtener_respuesta(tipo, mensaje):
 
     resultado = cursor.fetchone()
 
-    # parcial mejorado
     if not resultado:
         cursor.execute("""
             SELECT respuesta 
@@ -219,10 +213,7 @@ def obtener_respuesta(tipo, mensaje):
     return resultado[0] if resultado else None
 
 
-# =========================
-# 🔥 CITAS (NUEVO)
-# =========================
-
+# 🔥 CITAS
 def guardar_cita(cliente, negocio, fecha):
     conn = conectar()
     cursor = conn.cursor()
@@ -236,10 +227,7 @@ def guardar_cita(cliente, negocio, fecha):
     conn.close()
 
 
-# =========================
-# 🔥 ESTADO CONVERSACIÓN
-# =========================
-
+# 🔥 ESTADO
 def guardar_estado(numero, estado):
     conn = conectar()
     cursor = conn.cursor()
@@ -271,10 +259,7 @@ def obtener_estado(numero):
     return r[0] if r else None
 
 
-# =========================
-# 🔥 RESTO (igual)
-# =========================
-
+# 🔹 RESTO
 def obtener_respuestas(tipo):
     tipo = normalizar_numero(tipo)
     conn = conectar()
@@ -371,6 +356,42 @@ def crear_cuenta(username, password, numero_twilio, numero_cliente=None):
 
     conn.commit()
     conn.close()
+
+
+# 🔥 ESTA ERA LA QUE FALTABA
+def eliminar_cliente(username):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT tipo FROM cuentas
+        WHERE username = %s
+        LIMIT 1
+    """, (username,))
+
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        conn.close()
+        return False
+
+    numero = normalizar_numero(resultado[0])
+
+    cursor.execute("""
+        UPDATE numeros_twilio
+        SET en_uso = FALSE
+        WHERE numero = %s
+    """, (numero,))
+
+    cursor.execute("""
+        DELETE FROM cuentas
+        WHERE username = %s
+    """, (username,))
+
+    conn.commit()
+    conn.close()
+
+    return True
 
 
 
