@@ -80,7 +80,7 @@ def registro():
 
     crear_cuenta(username, password, numero_twilio, numero_cliente)
 
-    # 🔥 MENÚ PRINCIPAL (SIN BLOQUEAR CITAS)
+    # 🔥 MENÚ PRINCIPAL
     guardar_respuesta(numero_twilio, "hola",
         f"👋 Hola, soy el asistente de {username} 🤖\n\n"
         "1️⃣ Ver servicios\n"
@@ -144,9 +144,12 @@ def panel():
 
     return f"""
     <h2>Panel {tipo}</h2>
-    <a href="/respuestas">Ver respuestas</a><br><br>
-    <a href="/agregar_form">Agregar respuesta</a><br><br>
-    <a href="/logout">Salir</a>
+
+    <a href="/respuestas">📋 Respuestas</a><br><br>
+    <a href="/agregar_form">➕ Agregar respuesta</a><br><br>
+    <a href="/citas">📅 Ver citas</a><br><br>
+
+    <a href="/logout">🚪 Salir</a>
     """
 
 # =========================
@@ -162,7 +165,8 @@ def webhook():
         if not incoming_msg:
             incoming_msg = "hola"
 
-        from database import obtener_negocio_por_cliente
+        from database import obtener_negocio_por_cliente, guardar_cita
+
         negocio = obtener_negocio_por_cliente(user_number) or numero_twilio
 
         registrar_cliente(user_number, negocio)
@@ -179,6 +183,9 @@ def webhook():
         if estado == "esperando_fecha":
             estado_usuarios[user_number] = None
 
+            # 🔥 guardar en DB
+            guardar_cita(user_number, negocio, incoming_msg)
+
             msg.body(
                 f"✅ Tu cita quedó agendada:\n\n📅 {incoming_msg}\n\n"
                 "Te confirmaremos pronto 🙌"
@@ -186,7 +193,7 @@ def webhook():
             return str(resp)
 
         # =========================
-        # 🔥 DETECTOR (ANTES DE DB)
+        # 🔥 DETECTOR (PRIORIDAD ALTA)
         # =========================
         if incoming_msg == "3" or "cita" in incoming_msg:
             estado_usuarios[user_number] = "esperando_fecha"
@@ -198,7 +205,7 @@ def webhook():
             return str(resp)
 
         # =========================
-        # 🔥 RESPUESTA DESDE DB
+        # 🔥 RESPUESTA NORMAL
         # =========================
         respuesta = (
             obtener_respuesta(negocio, incoming_msg)
@@ -214,6 +221,42 @@ def webhook():
         resp = MessagingResponse()
         resp.message("Error interno")
         return str(resp)
+
+# =========================
+# 🔥 VER CITAS (NUEVO)
+# =========================
+@main.route("/citas")
+def ver_citas():
+    if "tipo" not in session:
+        return redirect("/login")
+
+    tipo = session["tipo"]
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT cliente, fecha, estado, creado
+        FROM citas
+        WHERE negocio = %s
+        ORDER BY creado DESC
+    """, (tipo,))
+
+    datos = cursor.fetchall()
+    conn.close()
+
+    html = f"<h2>📅 Citas de {tipo}</h2><hr>"
+
+    for cliente, fecha, estado, creado in datos:
+        html += f"""
+        👤 {cliente}<br>
+        📅 {fecha}<br>
+        📌 Estado: {estado}<br>
+        🕒 {creado}<br>
+        <hr>
+        """
+
+    return html
 
 # =========================
 # 🔥 CRUD RESPUESTAS
