@@ -18,8 +18,8 @@ import os
 
 SETUP_SECRET = os.getenv("SETUP_SECRET", "dev_secret_123")
 
-print("🚀 VERSION FINAL DEPLOY")
-print("🔥 BOT INTELIGENTE + CITAS ACTIVADO")
+print("🚀 VERSION FINAL PRODUCCION")
+print("🔥 BOT VENTAS + CITAS ACTIVADO")
 
 main = Blueprint('main', __name__)
 
@@ -76,21 +76,30 @@ def registro():
     numero_twilio = obtener_numero_disponible()
 
     if not numero_twilio:
-        return "❌ No hay números disponibles, contacta soporte"
+        return "❌ No hay números disponibles"
 
     crear_cuenta(username, password, numero_twilio, numero_cliente)
 
-    # 🔥 MENÚ PRINCIPAL
+    # 🔥 MENÚ CONVERTIDOR (VENTAS)
     guardar_respuesta(numero_twilio, "hola",
         f"👋 Hola, soy el asistente de {username} 🤖\n\n"
+        "🔥 Estoy aquí para ayudarte rápido:\n\n"
         "1️⃣ Ver servicios\n"
         "2️⃣ Ver precios\n"
         "3️⃣ Agendar cita\n\n"
-        "Escribe el número 👇"
+        "Responde con el número 👇"
     )
 
-    guardar_respuesta(numero_twilio, "1", "📋 Nuestros servicios disponibles...")
-    guardar_respuesta(numero_twilio, "2", "💰 Estos son nuestros precios...")
+    guardar_respuesta(numero_twilio, "1",
+        "📋 Servicios disponibles\n\n"
+        "💇‍♂️ Corte\n💅 Uñas\n💆‍♀️ Spa\n\n"
+        "Responde *3* para agendar"
+    )
+
+    guardar_respuesta(numero_twilio, "2",
+        "💰 Precios desde $20.000\n\n"
+        "Responde *3* y agenda ahora 📅"
+    )
 
     return f"""
     ✅ Bot activado 🚀<br><br>
@@ -110,7 +119,7 @@ def login_form():
     <form action="/login" method="POST">
         Usuario: <input name="username"><br><br>
         Password: <input name="password" type="password"><br><br>
-        <button type="submit">Entrar</button>
+        <button>Entrar</button>
     </form>
     """
 
@@ -153,7 +162,7 @@ def panel():
     """
 
 # =========================
-# 🔥 WEBHOOK INTELIGENTE + CITAS
+# 🔥 WEBHOOK (VENTAS + CITAS)
 # =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
@@ -175,42 +184,46 @@ def webhook():
         resp = MessagingResponse()
         msg = resp.message()
 
-        # =========================
-        # 🔥 FLUJO DE CITAS
-        # =========================
         estado = estado_usuarios.get(user_number)
 
+        # =========================
+        # 🔥 CONFIRMACIÓN DE CITA
+        # =========================
         if estado == "esperando_fecha":
             estado_usuarios[user_number] = None
 
-            # 🔥 guardar en DB
             guardar_cita(user_number, negocio, incoming_msg)
 
+            # 🔥 LOG INTERNO (notificación dueño)
+            print(f"📅 NUEVA CITA → Cliente: {user_number} | Negocio: {negocio} | Fecha: {incoming_msg}")
+
             msg.body(
-                f"✅ Tu cita quedó agendada:\n\n📅 {incoming_msg}\n\n"
-                "Te confirmaremos pronto 🙌"
+                f"✅ Cita confirmada 🎉\n\n"
+                f"📅 {incoming_msg}\n\n"
+                "⏰ Te esperamos\n"
+                "Si deseas cambiarla escribe *cita*"
             )
             return str(resp)
 
         # =========================
-        # 🔥 DETECTOR (PRIORIDAD ALTA)
+        # 🔥 ACTIVADOR DE VENTA
         # =========================
         if incoming_msg == "3" or "cita" in incoming_msg:
             estado_usuarios[user_number] = "esperando_fecha"
             msg.body(
-                "📅 Perfecto, vamos a agendar tu cita\n\n"
-                "Por favor escribe la fecha y hora 👇\n"
+                "📅 Perfecto 👌\n\n"
+                "Escribe fecha y hora:\n"
                 "Ej: 10 marzo 3pm"
             )
             return str(resp)
 
         # =========================
-        # 🔥 RESPUESTA NORMAL
+        # 🔥 RESPUESTA INTELIGENTE
         # =========================
         respuesta = (
             obtener_respuesta(negocio, incoming_msg)
             or obtener_respuesta(negocio, "hola")
-            or "👋 Escríbenos 'hola' para ver opciones"
+            or "👋 Escribe *hola* para comenzar"
         )
 
         msg.body(respuesta)
@@ -223,7 +236,7 @@ def webhook():
         return str(resp)
 
 # =========================
-# 🔥 VER CITAS (NUEVO)
+# 🔥 VER CITAS
 # =========================
 @main.route("/citas")
 def ver_citas():
@@ -251,7 +264,7 @@ def ver_citas():
         html += f"""
         👤 {cliente}<br>
         📅 {fecha}<br>
-        📌 Estado: {estado}<br>
+        📌 {estado}<br>
         🕒 {creado}<br>
         <hr>
         """
