@@ -31,7 +31,7 @@ def normalizar_numero(numero):
     return numero.replace("whatsapp:", "").replace("+", "").replace(" ", "").strip()
 
 
-# 🔹 INIT DB (CORREGIDO 🔥)
+# 🔹 INIT DB
 def init_db():
     conn = conectar()
     cursor = conn.cursor()
@@ -73,12 +73,12 @@ def init_db():
         )
         """)
 
-        # 🔥 FIX IMPORTANTE (SIN ROMPER TRANSACCIÓN)
+        # 🔥 agregar columna sin romper transacción
         try:
             cursor.execute("ALTER TABLE cuentas ADD COLUMN numero_cliente TEXT")
         except Exception:
             conn.rollback()
-            cursor = conn.cursor()  # 🔥 clave: nuevo cursor limpio
+            cursor = conn.cursor()
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS numeros_twilio (
@@ -236,7 +236,7 @@ def cargar_respuestas_demo():
 
 
 # =========================
-# 🔥 POOL DE NÚMEROS TWILIO
+# 🔥 POOL TWILIO
 # =========================
 
 def obtener_numero_disponible():
@@ -321,7 +321,7 @@ def eliminar_cliente(username):
     return True
 
 
-# 🔥 MULTI-NEGOCIO (CLAVE)
+# 🔥 MULTI-NEGOCIO
 def obtener_negocio_por_cliente(numero_cliente):
     numero_cliente = normalizar_numero(numero_cliente)
 
@@ -334,6 +334,23 @@ def obtener_negocio_por_cliente(numero_cliente):
         WHERE numero_cliente = %s
         LIMIT 1
     """, (numero_cliente,))
+
+    resultado = cursor.fetchone()
+    conn.close()
+
+    return resultado[0] if resultado else None
+
+
+# 🔐 LOGIN (🔥 ESTA ERA LA QUE FALTABA)
+def validar_usuario(username, password):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT tipo FROM cuentas
+        WHERE username = %s AND password = %s
+        LIMIT 1
+    """, (username, password))
 
     resultado = cursor.fetchone()
     conn.close()
