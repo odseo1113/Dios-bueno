@@ -358,5 +358,27 @@ def validar_usuario(username, password):
     return resultado[0] if resultado else None
 
 
+# 🔐 CREAR CUENTA (🔥 FALTABA ESTO)
+def crear_cuenta(username, password, numero_twilio, numero_cliente=None):
+    numero_twilio = normalizar_numero(numero_twilio)
+    numero_cliente = normalizar_numero(numero_cliente)
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO cuentas (username, password, tipo, numero_cliente)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (username)
+        DO UPDATE SET 
+            password = EXCLUDED.password,
+            tipo = EXCLUDED.tipo,
+            numero_cliente = EXCLUDED.numero_cliente
+    """, (username, password, numero_twilio, numero_cliente))
+
+    conn.commit()
+    conn.close()
+
+
 
     
