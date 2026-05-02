@@ -1,9 +1,20 @@
 import psycopg2
 
-
 def conectar():
     import os
-    return psycopg2.connect(os.getenv("DATABASE_URL"))
+    try:
+        DATABASE_URL = os.getenv("DATABASE_URL")
+
+        if not DATABASE_URL:
+            raise Exception("❌ DATABASE_URL no existe")
+
+        conn = psycopg2.connect(DATABASE_URL)
+        print("✅ Conectado a PostgreSQL")
+        return conn
+
+    except Exception as e:
+        print("❌ ERROR CONEXIÓN DB:", e)
+        raise e
 
 
 # 🔹 LIMPIAR TEXTO
