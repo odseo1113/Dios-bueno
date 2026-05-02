@@ -5,7 +5,6 @@ from database import (
     registrar_cliente,
     obtener_respuesta,
     guardar_respuesta,
-    cargar_respuestas_demo,
     normalizar_numero,
     obtener_respuestas,
     eliminar_respuesta,
@@ -17,89 +16,29 @@ from database import (
 
 import os
 
-# 🔒 CLAVE SECRETA PARA SETUP
 SETUP_SECRET = os.getenv("SETUP_SECRET", "dev_secret_123")
 
-# 🔥 DEBUG
-print("🚀 VERSION NUEVA DEPLOYADA")
-print("🔥 ROUTES CARGADO")
-print("🔥 ARCHIVO ROUTES REAL:", __file__)
-print("🔥 LOGIN + DEBUG DB ACTIVADO")
+print("🚀 VERSION FINAL DEPLOY")
+print("🔥 BOT INTELIGENTE + CITAS ACTIVADO")
 
 main = Blueprint('main', __name__)
 
+# =========================
+# 🔥 MEMORIA SIMPLE
+# =========================
+estado_usuarios = {}
 
-# 🔥 TEST NUEVO
-@main.route("/soy_nuevo")
-def soy_nuevo():
-    return "🔥 NUEVA RUTA 🔥"
+# =========================
+# 🔹 BASICO
+# =========================
 
-
-# 🔥 TEST
-@main.route("/test")
-def test():
-    return "🔥 TEST MODIFICADO 🔥"
-
-
-# 🔹 HOME
 @main.route("/")
 def home():
-    return "CAMBIO REAL NUEVO 999999 🚀"
+    return "BOT OK 🚀"
 
-
-# 🔥 PING
 @main.route("/ping")
 def ping():
-    print("🔥 PING OK")
     return "pong"
-
-
-# =========================
-# 🔥 SETUP PROTEGIDO
-# =========================
-@main.route("/setup")
-def setup():
-    print("🔥 SETUP HIT 🔥")
-
-    secret = request.args.get("key")
-
-    if secret != SETUP_SECRET:
-        return "❌ No autorizado", 403
-
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS cuentas (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE,
-            password TEXT,
-            tipo TEXT
-        )
-        """)
-
-        try:
-            cursor.execute("DELETE FROM respuestas")
-        except Exception as e:
-            print("⚠️ No se pudo limpiar respuestas:", e)
-
-        cursor.execute("""
-            INSERT INTO cuentas (username, password, tipo)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (username)
-            DO UPDATE SET tipo = EXCLUDED.tipo
-        """, ("admin", "1234", "14155238886"))
-
-        conn.commit()
-        conn.close()
-
-        return "✅ SETUP OK"
-
-    except Exception as e:
-        print("❌ ERROR SETUP:", e)
-        return f"❌ ERROR: {str(e)}"
-
 
 # =========================
 # 🔥 REGISTRO
@@ -115,13 +54,12 @@ def registro_form():
         Contraseña:<br>
         <input name="password" type="password"><br><br>
 
-        Número WhatsApp (ej: 573001234567):<br>
+        Número WhatsApp:<br>
         <input name="numero"><br><br>
 
         <button type="submit">Registrarse</button>
     </form>
     """
-
 
 @main.route("/registro", methods=["POST"])
 def registro():
@@ -135,40 +73,32 @@ def registro():
         return "❌ Faltan datos"
 
     numero_cliente = normalizar_numero(numero_cliente)
-
     numero_twilio = obtener_numero_disponible()
 
     if not numero_twilio:
         return "❌ No hay números disponibles, contacta soporte"
 
-    try:
-        crear_cuenta(username, password, numero_twilio, numero_cliente)
+    crear_cuenta(username, password, numero_twilio, numero_cliente)
 
-        # 🔥 MENSAJE PERSONALIZADO (CLAVE PARA VENDER)
-        guardar_respuesta(numero_twilio, "hola",
-            f"👋 Hola, soy el asistente de {username} 🤖\n\n1️⃣ Servicios\n2️⃣ Precios\n3️⃣ Citas"
-        )
-        guardar_respuesta(numero_twilio, "1", "📋 Lista de servicios")
-        guardar_respuesta(numero_twilio, "2", "💰 Consulta precios")
-        guardar_respuesta(numero_twilio, "3", "📅 Agenda tu cita")
+    # 🔥 MENÚ PRINCIPAL (SIN BLOQUEAR CITAS)
+    guardar_respuesta(numero_twilio, "hola",
+        f"👋 Hola, soy el asistente de {username} 🤖\n\n"
+        "1️⃣ Ver servicios\n"
+        "2️⃣ Ver precios\n"
+        "3️⃣ Agendar cita\n\n"
+        "Escribe el número 👇"
+    )
 
-        # 🔥 MENSAJE MEJORADO (VENTAS)
-        return f"""
-        ✅ Bot activado correctamente 🚀<br><br>
+    guardar_respuesta(numero_twilio, "1", "📋 Nuestros servicios disponibles...")
+    guardar_respuesta(numero_twilio, "2", "💰 Estos son nuestros precios...")
 
-        📲 Prueba tu asistente ahora:<br>
-        👉 Escríbele a este número en WhatsApp:<br>
-        <b>+{numero_twilio}</b><br><br>
-
-        💡 Escribe "hola" para ver cómo responde automáticamente<br><br>
-
-        <a href="/login">🔐 Ir a mi panel</a>
-        """
-
-    except Exception as e:
-        print("❌ ERROR REGISTRO:", e)
-        return f"❌ ERROR: {str(e)}"
-
+    return f"""
+    ✅ Bot activado 🚀<br><br>
+    📲 Escríbele a:<br>
+    <b>+{numero_twilio}</b><br><br>
+    💡 Escribe "hola"<br><br>
+    <a href="/login">Ir al panel</a>
+    """
 
 # =========================
 # 🔐 LOGIN
@@ -176,14 +106,13 @@ def registro():
 @main.route("/login", methods=["GET"])
 def login_form():
     return """
-    <h2>🔐 Login</h2>
+    <h2>Login</h2>
     <form action="/login" method="POST">
         Usuario: <input name="username"><br><br>
         Password: <input name="password" type="password"><br><br>
         <button type="submit">Entrar</button>
     </form>
     """
-
 
 @main.route("/login", methods=["POST"])
 def login():
@@ -198,15 +127,14 @@ def login():
 
     return "❌ Credenciales incorrectas"
 
-
-# 🔥 LOGOUT
 @main.route("/logout")
 def logout():
     session.clear()
-    return "👋 Sesión cerrada"
+    return "Sesión cerrada"
 
-
+# =========================
 # 🔥 PANEL
+# =========================
 @main.route("/panel")
 def panel():
     if "tipo" not in session:
@@ -215,37 +143,17 @@ def panel():
     tipo = session["tipo"]
 
     return f"""
-    <h2>🏢 Panel del negocio {tipo}</h2>
-    <a href="/respuestas">📋 Ver respuestas</a><br><br>
-    <a href="/agregar_form">➕ Agregar respuesta</a><br><br>
-    <a href="/logout">🚪 Salir</a>
+    <h2>Panel {tipo}</h2>
+    <a href="/respuestas">Ver respuestas</a><br><br>
+    <a href="/agregar_form">Agregar respuesta</a><br><br>
+    <a href="/logout">Salir</a>
     """
 
-
-# 🔥 DEBUG USUARIO
-@main.route("/debug_usuario")
-def debug_usuario():
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT username, tipo FROM cuentas")
-    datos = cursor.fetchall()
-
-    conn.close()
-
-    html = "<h2>👀 Usuarios en DB</h2><hr>"
-
-    for user, tipo in datos:
-        html += f"{user} → {tipo}<br>"
-
-    return html
-
-
-# 🔥 WEBHOOK MULTI-CLIENTE (PRODUCCIÓN)
+# =========================
+# 🔥 WEBHOOK INTELIGENTE + CITAS
+# =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
-    print("🔥 WEBHOOK HIT 🔥")
-
     try:
         user_number = normalizar_numero(request.form.get("From", ""))
         numero_twilio = normalizar_numero(request.form.get("To", ""))
@@ -254,17 +162,8 @@ def webhook():
         if not incoming_msg:
             incoming_msg = "hola"
 
-        # 🔥 IMPORTANTE: detectar negocio por número del cliente
         from database import obtener_negocio_por_cliente
-
-        negocio = obtener_negocio_por_cliente(user_number)
-
-        # 🔥 fallback si no está registrado (modo demo)
-        if not negocio:
-            negocio = numero_twilio
-
-        print(f"📌 Cliente: {user_number}")
-        print(f"🏢 Negocio detectado: {negocio}")
+        negocio = obtener_negocio_por_cliente(user_number) or numero_twilio
 
         registrar_cliente(user_number, negocio)
         guardar_usuario(user_number, incoming_msg, negocio)
@@ -272,14 +171,42 @@ def webhook():
         resp = MessagingResponse()
         msg = resp.message()
 
+        # =========================
+        # 🔥 FLUJO DE CITAS
+        # =========================
+        estado = estado_usuarios.get(user_number)
+
+        if estado == "esperando_fecha":
+            estado_usuarios[user_number] = None
+
+            msg.body(
+                f"✅ Tu cita quedó agendada:\n\n📅 {incoming_msg}\n\n"
+                "Te confirmaremos pronto 🙌"
+            )
+            return str(resp)
+
+        # =========================
+        # 🔥 DETECTOR (ANTES DE DB)
+        # =========================
+        if incoming_msg == "3" or "cita" in incoming_msg:
+            estado_usuarios[user_number] = "esperando_fecha"
+            msg.body(
+                "📅 Perfecto, vamos a agendar tu cita\n\n"
+                "Por favor escribe la fecha y hora 👇\n"
+                "Ej: 10 marzo 3pm"
+            )
+            return str(resp)
+
+        # =========================
+        # 🔥 RESPUESTA DESDE DB
+        # =========================
         respuesta = (
             obtener_respuesta(negocio, incoming_msg)
             or obtener_respuesta(negocio, "hola")
-            or "👋 Hola, en breve te atendemos"
+            or "👋 Escríbenos 'hola' para ver opciones"
         )
 
         msg.body(respuesta)
-
         return str(resp)
 
     except Exception as e:
@@ -288,8 +215,9 @@ def webhook():
         resp.message("Error interno")
         return str(resp)
 
-
-# 🔥 VER RESPUESTAS
+# =========================
+# 🔥 CRUD RESPUESTAS
+# =========================
 @main.route("/respuestas")
 def ver_respuestas():
     if "tipo" not in session:
@@ -298,35 +226,27 @@ def ver_respuestas():
     numero = session["tipo"]
     datos = obtener_respuestas(numero)
 
-    html = f"<h2>📋 Respuestas de {numero}</h2><hr>"
+    html = "<h2>Respuestas</h2><hr>"
 
     for palabra, respuesta in datos:
-        html += f"""
-        <b>{palabra}</b> → {respuesta}<br>
-        <a href="/eliminar?palabra={palabra}">❌ Eliminar</a>
-        <hr>
-        """
+        html += f"{palabra} → {respuesta}<br>"
 
     return html
 
-
-# 🔥 FORM AGREGAR
 @main.route("/agregar_form")
 def agregar_form():
     if "tipo" not in session:
         return redirect("/login")
 
     return """
-    <h2>➕ Nueva respuesta</h2>
-    <form action="/agregar" method="GET">
+    <h2>Nueva respuesta</h2>
+    <form action="/agregar">
         Palabra: <input name="palabra"><br><br>
         Respuesta: <input name="respuesta"><br><br>
-        <button type="submit">Guardar</button>
+        <button>Guardar</button>
     </form>
     """
 
-
-# 🔥 AGREGAR
 @main.route("/agregar")
 def agregar():
     if "tipo" not in session:
@@ -336,15 +256,9 @@ def agregar():
     palabra = request.args.get("palabra")
     respuesta = request.args.get("respuesta")
 
-    if not palabra or not respuesta:
-        return "❌ Faltan parámetros"
-
     guardar_respuesta(numero, palabra, respuesta)
+    return "Guardado"
 
-    return "✅ Guardado <br><a href='/panel'>Volver</a>"
-
-
-# 🔥 ELIMINAR RESPUESTA
 @main.route("/eliminar")
 def eliminar():
     if "tipo" not in session:
@@ -353,15 +267,12 @@ def eliminar():
     numero = session["tipo"]
     palabra = request.args.get("palabra")
 
-    if not palabra:
-        return "❌ Falta palabra"
-
     eliminar_respuesta(numero, palabra)
+    return "Eliminado"
 
-    return "✅ Eliminado <br><a href='/respuestas'>Volver</a>"
-
-
+# =========================
 # 🔥 ELIMINAR CLIENTE
+# =========================
 @main.route("/eliminar_cliente")
 def eliminar_cliente_route():
     if "tipo" not in session:
@@ -369,15 +280,9 @@ def eliminar_cliente_route():
 
     username = request.args.get("username")
 
-    if not username:
-        return "❌ Falta username"
-
     ok = eliminar_cliente(username)
 
     if not ok:
-        return "❌ Cliente no encontrado"
+        return "❌ No encontrado"
 
-    return "✅ Cliente eliminado y número liberado"
-
-
-print("🔥🔥🔥 FINAL DEL ARCHIVO 🔥🔥🔥")
+    return "✅ Eliminado"

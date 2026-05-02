@@ -24,7 +24,7 @@ def limpiar(texto):
     return texto.strip().lower()
 
 
-# 🔥 NORMALIZAR NÚMERO (CLAVE)
+# 🔥 NORMALIZAR NÚMERO
 def normalizar_numero(numero):
     if not numero:
         return ""
@@ -73,18 +73,39 @@ def init_db():
         )
         """)
 
-        # 🔥 agregar columna sin romper transacción
+        # 🔥 columna cliente
         try:
             cursor.execute("ALTER TABLE cuentas ADD COLUMN numero_cliente TEXT")
         except Exception:
             conn.rollback()
             cursor = conn.cursor()
 
+        # 🔥 pool twilio
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS numeros_twilio (
             id SERIAL PRIMARY KEY,
             numero TEXT UNIQUE,
             en_uso BOOLEAN DEFAULT FALSE
+        )
+        """)
+
+        # 🔥 NUEVO: CITAS
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS citas (
+            id SERIAL PRIMARY KEY,
+            cliente TEXT,
+            negocio TEXT,
+            fecha TEXT,
+            estado TEXT DEFAULT 'pendiente',
+            creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # 🔥 NUEVO: ESTADO CONVERSACIÓN
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS estados (
+            numero TEXT PRIMARY KEY,
+            estado TEXT
         )
         """)
 
@@ -164,7 +185,7 @@ def guardar_respuesta(tipo, palabra, respuesta):
     conn.close()
 
 
-# 🤖 OBTENER RESPUESTA
+# 🤖 RESPUESTA INTELIGENTE (MEJORADA 🔥)
 def obtener_respuesta(tipo, mensaje):
     tipo = normalizar_numero(tipo)
     mensaje = limpiar(mensaje)
@@ -172,6 +193,7 @@ def obtener_respuesta(tipo, mensaje):
     conn = conectar()
     cursor = conn.cursor()
 
+    # exacto
     cursor.execute("""
         SELECT respuesta 
         FROM respuestas 
@@ -181,11 +203,13 @@ def obtener_respuesta(tipo, mensaje):
 
     resultado = cursor.fetchone()
 
+    # parcial mejorado
     if not resultado:
         cursor.execute("""
             SELECT respuesta 
             FROM respuestas 
             WHERE tipo = %s AND %s ILIKE '%%' || palabra || '%%'
+            ORDER BY LENGTH(palabra) DESC
             LIMIT 1
         """, (tipo, mensaje))
 
@@ -195,10 +219,64 @@ def obtener_respuesta(tipo, mensaje):
     return resultado[0] if resultado else None
 
 
-# 🔹 OBTENER TODAS LAS RESPUESTAS
+# =========================
+# 🔥 CITAS (NUEVO)
+# =========================
+
+def guardar_cita(cliente, negocio, fecha):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO citas (cliente, negocio, fecha)
+        VALUES (%s, %s, %s)
+    """, (cliente, negocio, fecha))
+
+    conn.commit()
+    conn.close()
+
+
+# =========================
+# 🔥 ESTADO CONVERSACIÓN
+# =========================
+
+def guardar_estado(numero, estado):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO estados (numero, estado)
+        VALUES (%s, %s)
+        ON CONFLICT (numero)
+        DO UPDATE SET estado = EXCLUDED.estado
+    """, (numero, estado))
+
+    conn.commit()
+    conn.close()
+
+
+def obtener_estado(numero):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT estado FROM estados
+        WHERE numero = %s
+        LIMIT 1
+    """, (numero,))
+
+    r = cursor.fetchone()
+    conn.close()
+
+    return r[0] if r else None
+
+
+# =========================
+# 🔥 RESTO (igual)
+# =========================
+
 def obtener_respuestas(tipo):
     tipo = normalizar_numero(tipo)
-
     conn = conectar()
     cursor = conn.cursor()
 
@@ -209,11 +287,9 @@ def obtener_respuestas(tipo):
 
     datos = cursor.fetchall()
     conn.close()
-
     return datos
 
 
-# 🔹 ELIMINAR RESPUESTA
 def eliminar_respuesta(tipo, palabra):
     tipo = normalizar_numero(tipo)
     palabra = limpiar(palabra)
@@ -229,15 +305,6 @@ def eliminar_respuesta(tipo, palabra):
     conn.commit()
     conn.close()
 
-
-# 🔥 DEMO
-def cargar_respuestas_demo():
-    print("⚠️ cargar_respuestas_demo ejecutado")
-
-
-# =========================
-# 🔥 POOL TWILIO
-# =========================
 
 def obtener_numero_disponible():
     conn = conectar()
@@ -269,79 +336,6 @@ def obtener_numero_disponible():
     return numero
 
 
-def liberar_numero(numero):
-    numero = normalizar_numero(numero)
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE numeros_twilio
-        SET en_uso = FALSE
-        WHERE numero = %s
-    """, (numero,))
-
-    conn.commit()
-    conn.close()
-
-
-# 🔥 ELIMINAR CLIENTE
-def eliminar_cliente(username):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT tipo FROM cuentas
-        WHERE username = %s
-        LIMIT 1
-    """, (username,))
-
-    resultado = cursor.fetchone()
-
-    if not resultado:
-        conn.close()
-        return False
-
-    numero = normalizar_numero(resultado[0])
-
-    cursor.execute("""
-        UPDATE numeros_twilio
-        SET en_uso = FALSE
-        WHERE numero = %s
-    """, (numero,))
-
-    cursor.execute("""
-        DELETE FROM cuentas
-        WHERE username = %s
-    """, (username,))
-
-    conn.commit()
-    conn.close()
-
-    return True
-
-
-# 🔥 MULTI-NEGOCIO
-def obtener_negocio_por_cliente(numero_cliente):
-    numero_cliente = normalizar_numero(numero_cliente)
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT tipo
-        FROM cuentas
-        WHERE numero_cliente = %s
-        LIMIT 1
-    """, (numero_cliente,))
-
-    resultado = cursor.fetchone()
-    conn.close()
-
-    return resultado[0] if resultado else None
-
-
-# 🔐 LOGIN (🔥 ESTA ERA LA QUE FALTABA)
 def validar_usuario(username, password):
     conn = conectar()
     cursor = conn.cursor()
@@ -352,13 +346,12 @@ def validar_usuario(username, password):
         LIMIT 1
     """, (username, password))
 
-    resultado = cursor.fetchone()
+    r = cursor.fetchone()
     conn.close()
 
-    return resultado[0] if resultado else None
+    return r[0] if r else None
 
 
-# 🔐 CREAR CUENTA (🔥 FALTABA ESTO)
 def crear_cuenta(username, password, numero_twilio, numero_cliente=None):
     numero_twilio = normalizar_numero(numero_twilio)
     numero_cliente = normalizar_numero(numero_cliente)
