@@ -154,13 +154,13 @@ def registrar_cliente(numero, tipo):
 # 🤖 GUARDAR RESPUESTA
 def guardar_respuesta(tipo, palabra, respuesta):
     tipo = normalizar_numero(tipo)
-    palabra = limpiar(palabra)
+    palabra = limpiar(palabra).strip()  # 🔥 FIX
 
     conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT id FROM respuestas WHERE tipo = %s AND palabra = %s",
+        "SELECT id FROM respuestas WHERE TRIM(tipo) = TRIM(%s) AND TRIM(palabra) = TRIM(%s)",
         (tipo, palabra)
     )
 
@@ -181,7 +181,7 @@ def guardar_respuesta(tipo, palabra, respuesta):
     conn.close()
 
 
-# 🤖 RESPUESTA INTELIGENTE
+# 🤖 RESPUESTA INTELIGENTE (FIX REAL)
 def obtener_respuesta(tipo, mensaje):
     tipo = normalizar_numero(tipo)
     mensaje = limpiar(mensaje)
@@ -189,10 +189,12 @@ def obtener_respuesta(tipo, mensaje):
     conn = conectar()
     cursor = conn.cursor()
 
+    # 🔥 FIX CLAVE (evita errores por espacios o formato)
     cursor.execute("""
         SELECT respuesta 
         FROM respuestas 
-        WHERE tipo = %s AND palabra = %s
+        WHERE TRIM(tipo) = TRIM(%s) 
+        AND LOWER(TRIM(palabra)) = LOWER(TRIM(%s))
         LIMIT 1
     """, (tipo, mensaje))
 
@@ -202,7 +204,8 @@ def obtener_respuesta(tipo, mensaje):
         cursor.execute("""
             SELECT respuesta 
             FROM respuestas 
-            WHERE tipo = %s AND %s ILIKE '%%' || palabra || '%%'
+            WHERE TRIM(tipo) = TRIM(%s) 
+            AND %s ILIKE '%%' || palabra || '%%'
             ORDER BY LENGTH(palabra) DESC
             LIMIT 1
         """, (tipo, mensaje))
@@ -266,7 +269,7 @@ def obtener_respuestas(tipo):
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT palabra, respuesta FROM respuestas WHERE tipo = %s",
+        "SELECT palabra, respuesta FROM respuestas WHERE TRIM(tipo) = TRIM(%s)",
         (tipo,)
     )
 
@@ -283,7 +286,7 @@ def eliminar_respuesta(tipo, palabra):
     cursor = conn.cursor()
 
     cursor.execute(
-        "DELETE FROM respuestas WHERE tipo = %s AND palabra = %s",
+        "DELETE FROM respuestas WHERE TRIM(tipo) = TRIM(%s) AND TRIM(palabra) = TRIM(%s)",
         (tipo, palabra)
     )
 
@@ -358,7 +361,6 @@ def crear_cuenta(username, password, numero_twilio, numero_cliente=None):
     conn.close()
 
 
-# 🔥 ESTA ERA LA QUE FALTABA
 def eliminar_cliente(username):
     conn = conectar()
     cursor = conn.cursor()
@@ -394,7 +396,6 @@ def eliminar_cliente(username):
     return True
 
 
-# NEGOCIO POR CLIENTE
 def obtener_negocio_por_cliente(numero_cliente):
     numero_cliente = normalizar_numero(numero_cliente)
 
