@@ -80,7 +80,6 @@ def registro():
 
     crear_cuenta(username, password, numero_twilio, numero_cliente)
 
-    # MENÚ INICIAL
     guardar_respuesta(numero_twilio, "hola",
         f"👋 Hola, soy el asistente de {username} 🤖\n\n"
         "1️⃣ Servicios\n"
@@ -155,29 +154,36 @@ def panel():
     """
 
 # =========================
-# 🔥 WEBHOOK (PRODUCCION OK - FIX REAL)
+# 🔥 WEBHOOK (FIX FINAL)
 # =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
     try:
-        user_number = normalizar_numero(request.form.get("From", ""))
-        numero_twilio = normalizar_numero(request.form.get("To", ""))
+        raw_from = request.form.get("From", "")
+        raw_to = request.form.get("To", "")
 
-        incoming_msg = request.form.get("Body", "")
-        incoming_msg = (incoming_msg or "").strip().lower()
+        user_number = normalizar_numero(raw_from)
+        numero_twilio = normalizar_numero(raw_to)
+
+        incoming_msg = (request.form.get("Body", "") or "").strip().lower()
 
         if not incoming_msg:
             incoming_msg = "hola"
 
-        # 🔥 FIX REAL (no romper relación cliente-negocio)
         from database import guardar_cita, obtener_negocio_por_cliente
 
-        negocio = obtener_negocio_por_cliente(user_number) or numero_twilio
+        # 🔥 FIX CLAVE: fallback robusto
+        negocio = obtener_negocio_por_cliente(user_number)
+        if not negocio:
+            negocio = numero_twilio
+
+        print(f"📩 MSG: {incoming_msg}")
+        print(f"👤 FROM(raw): {raw_from} -> {user_number}")
+        print(f"🤖 TO(raw): {raw_to} -> {numero_twilio}")
+        print(f"🏢 NEGOCIO: {negocio}")
 
         registrar_cliente(user_number, negocio)
         guardar_usuario(user_number, incoming_msg, negocio)
-
-        print(f"📩 MSG: {incoming_msg} | FROM: {user_number} | BOT: {negocio}")
 
         resp = MessagingResponse()
         msg = resp.message()
@@ -202,7 +208,7 @@ def webhook():
             return str(resp)
 
         # =========================
-        # 🔥 ACTIVADOR CITA
+        # 🔥 ACTIVAR CITA
         # =========================
         if incoming_msg == "3" or "cita" in incoming_msg:
             estado_usuarios[user_number] = "esperando_fecha"
@@ -215,14 +221,16 @@ def webhook():
             return str(resp)
 
         # =========================
-        # 🔥 RESPUESTA DB (MEJORADA)
+        # 🔥 RESPUESTA DB
         # =========================
         respuesta = obtener_respuesta(negocio, incoming_msg)
 
         if not respuesta:
+            print("⚠️ No encontró respuesta exacta")
             respuesta = obtener_respuesta(negocio, "hola")
 
         if not respuesta:
+            print("⚠️ No existe 'hola' en DB")
             respuesta = "👋 Escribe *hola* para comenzar"
 
         msg.body(respuesta)
@@ -234,7 +242,6 @@ def webhook():
         resp = MessagingResponse()
         resp.message("Error interno")
         return str(resp)
-
 
 # =========================
 # 🔥 CITAS
@@ -272,7 +279,6 @@ def ver_citas():
 
     return html
 
-
 # =========================
 # 🔥 RESPUESTAS
 # =========================
@@ -291,7 +297,6 @@ def ver_respuestas():
 
     return html
 
-
 @main.route("/agregar_form")
 def agregar_form():
     if "tipo" not in session:
@@ -306,7 +311,6 @@ def agregar_form():
     </form>
     """
 
-
 @main.route("/agregar")
 def agregar():
     if "tipo" not in session:
@@ -319,7 +323,6 @@ def agregar():
     guardar_respuesta(numero, palabra, respuesta)
     return "Guardado"
 
-
 @main.route("/eliminar")
 def eliminar():
     if "tipo" not in session:
@@ -330,7 +333,6 @@ def eliminar():
 
     eliminar_respuesta(numero, palabra)
     return "Eliminado"
-
 
 # =========================
 # 🔥 ELIMINAR CLIENTE
