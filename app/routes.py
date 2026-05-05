@@ -155,25 +155,29 @@ def panel():
     """
 
 # =========================
-# 🔥 WEBHOOK (FIX AQUI)
+# 🔥 WEBHOOK (PRODUCCION OK)
 # =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
     try:
         user_number = normalizar_numero(request.form.get("From", ""))
         numero_twilio = normalizar_numero(request.form.get("To", ""))
-        incoming_msg = (request.form.get("Body", "") or "").strip().lower()
+
+        incoming_msg = request.form.get("Body", "")
+        incoming_msg = (incoming_msg or "").strip().lower()
 
         if not incoming_msg:
             incoming_msg = "hola"
 
         from database import guardar_cita
 
-        # 🔥 FIX CLAVE: SIEMPRE usar numero_twilio
+        # 🔥 SIEMPRE usar numero del bot
         negocio = numero_twilio
 
         registrar_cliente(user_number, negocio)
         guardar_usuario(user_number, incoming_msg, negocio)
+
+        print(f"📩 MSG: {incoming_msg} | FROM: {user_number} | BOT: {negocio}")
 
         resp = MessagingResponse()
         msg = resp.message()
@@ -202,30 +206,36 @@ def webhook():
         # =========================
         if incoming_msg == "3" or "cita" in incoming_msg:
             estado_usuarios[user_number] = "esperando_fecha"
+
             msg.body(
                 "📅 Perfecto 👌\n\n"
                 "Escribe fecha y hora:\n"
-                "Ej: 10 marzo 3pm"
+                "Ej: 10 mayo 3pm"
             )
             return str(resp)
 
         # =========================
-        # 🔥 RESPUESTA NORMAL
+        # 🔥 RESPUESTA DB (MEJORADA)
         # =========================
-        respuesta = (
-            obtener_respuesta(negocio, incoming_msg)
-            or obtener_respuesta(negocio, "hola")
-            or "👋 Escribe *hola*"
-        )
+        respuesta = obtener_respuesta(negocio, incoming_msg)
+
+        # fallback seguro
+        if not respuesta:
+            respuesta = obtener_respuesta(negocio, "hola")
+
+        if not respuesta:
+            respuesta = "👋 Escribe *hola* para comenzar"
 
         msg.body(respuesta)
         return str(resp)
 
     except Exception as e:
-        print("❌ ERROR WEBHOOK:", e)
+        print("❌ ERROR WEBHOOK:", str(e))
+
         resp = MessagingResponse()
         resp.message("Error interno")
         return str(resp)
+
 
 # =========================
 # 🔥 CITAS
@@ -263,6 +273,7 @@ def ver_citas():
 
     return html
 
+
 # =========================
 # 🔥 RESPUESTAS
 # =========================
@@ -281,6 +292,7 @@ def ver_respuestas():
 
     return html
 
+
 @main.route("/agregar_form")
 def agregar_form():
     if "tipo" not in session:
@@ -295,6 +307,7 @@ def agregar_form():
     </form>
     """
 
+
 @main.route("/agregar")
 def agregar():
     if "tipo" not in session:
@@ -307,6 +320,7 @@ def agregar():
     guardar_respuesta(numero, palabra, respuesta)
     return "Guardado"
 
+
 @main.route("/eliminar")
 def eliminar():
     if "tipo" not in session:
@@ -317,6 +331,7 @@ def eliminar():
 
     eliminar_respuesta(numero, palabra)
     return "Eliminado"
+
 
 # =========================
 # 🔥 ELIMINAR CLIENTE
