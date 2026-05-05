@@ -155,7 +155,7 @@ def panel():
     """
 
 # =========================
-# 🔥 WEBHOOK (PRODUCCION OK)
+# 🔥 WEBHOOK (PRODUCCION OK - FIX REAL)
 # =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
@@ -169,10 +169,10 @@ def webhook():
         if not incoming_msg:
             incoming_msg = "hola"
 
-        from database import guardar_cita
+        # 🔥 FIX REAL (no romper relación cliente-negocio)
+        from database import guardar_cita, obtener_negocio_por_cliente
 
-        # 🔥 SIEMPRE usar numero del bot
-        negocio = numero_twilio
+        negocio = obtener_negocio_por_cliente(user_number) or numero_twilio
 
         registrar_cliente(user_number, negocio)
         guardar_usuario(user_number, incoming_msg, negocio)
@@ -219,7 +219,6 @@ def webhook():
         # =========================
         respuesta = obtener_respuesta(negocio, incoming_msg)
 
-        # fallback seguro
         if not respuesta:
             respuesta = obtener_respuesta(negocio, "hola")
 
