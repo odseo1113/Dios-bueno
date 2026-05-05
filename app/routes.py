@@ -76,30 +76,23 @@ def registro():
     numero_twilio = obtener_numero_disponible()
 
     if not numero_twilio:
-        return "❌ No hay números disponibles"
+        return "❌ No hay números disponibles, contacta soporte"
 
     crear_cuenta(username, password, numero_twilio, numero_cliente)
 
-    # 🔥 MENÚ CONVERTIDOR (VENTAS)
+    # MENÚ INICIAL
     guardar_respuesta(numero_twilio, "hola",
         f"👋 Hola, soy el asistente de {username} 🤖\n\n"
-        "🔥 Estoy aquí para ayudarte rápido:\n\n"
-        "1️⃣ Ver servicios\n"
-        "2️⃣ Ver precios\n"
-        "3️⃣ Agendar cita\n\n"
-        "Responde con el número 👇"
+        "1️⃣ Servicios\n"
+        "2️⃣ Precios\n"
+        "3️⃣ Agendar cita\n"
+        "4️⃣ Ubicación\n\n"
+        "Escribe el número 👇"
     )
 
-    guardar_respuesta(numero_twilio, "1",
-        "📋 Servicios disponibles\n\n"
-        "💇‍♂️ Corte\n💅 Uñas\n💆‍♀️ Spa\n\n"
-        "Responde *3* para agendar"
-    )
-
-    guardar_respuesta(numero_twilio, "2",
-        "💰 Precios desde $20.000\n\n"
-        "Responde *3* y agenda ahora 📅"
-    )
+    guardar_respuesta(numero_twilio, "1", "📋 Nuestros servicios...")
+    guardar_respuesta(numero_twilio, "2", "💰 Nuestros precios...")
+    guardar_respuesta(numero_twilio, "4", "📍 Nuestra ubicación...")
 
     return f"""
     ✅ Bot activado 🚀<br><br>
@@ -119,7 +112,7 @@ def login_form():
     <form action="/login" method="POST">
         Usuario: <input name="username"><br><br>
         Password: <input name="password" type="password"><br><br>
-        <button>Entrar</button>
+        <button type="submit">Entrar</button>
     </form>
     """
 
@@ -162,7 +155,7 @@ def panel():
     """
 
 # =========================
-# 🔥 WEBHOOK (VENTAS + CITAS)
+# 🔥 WEBHOOK (FIX AQUI)
 # =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
@@ -174,9 +167,10 @@ def webhook():
         if not incoming_msg:
             incoming_msg = "hola"
 
-        from database import obtener_negocio_por_cliente, guardar_cita
+        from database import guardar_cita
 
-        negocio = obtener_negocio_por_cliente(user_number) or numero_twilio
+        # 🔥 FIX CLAVE: SIEMPRE usar numero_twilio
+        negocio = numero_twilio
 
         registrar_cliente(user_number, negocio)
         guardar_usuario(user_number, incoming_msg, negocio)
@@ -187,26 +181,24 @@ def webhook():
         estado = estado_usuarios.get(user_number)
 
         # =========================
-        # 🔥 CONFIRMACIÓN DE CITA
+        # 🔥 CONFIRMAR CITA
         # =========================
         if estado == "esperando_fecha":
             estado_usuarios[user_number] = None
 
             guardar_cita(user_number, negocio, incoming_msg)
 
-            # 🔥 LOG INTERNO (notificación dueño)
-            print(f"📅 NUEVA CITA → Cliente: {user_number} | Negocio: {negocio} | Fecha: {incoming_msg}")
+            print(f"📅 NUEVA CITA → {user_number} | {incoming_msg}")
 
             msg.body(
                 f"✅ Cita confirmada 🎉\n\n"
                 f"📅 {incoming_msg}\n\n"
-                "⏰ Te esperamos\n"
-                "Si deseas cambiarla escribe *cita*"
+                "⏰ Te esperamos"
             )
             return str(resp)
 
         # =========================
-        # 🔥 ACTIVADOR DE VENTA
+        # 🔥 ACTIVADOR CITA
         # =========================
         if incoming_msg == "3" or "cita" in incoming_msg:
             estado_usuarios[user_number] = "esperando_fecha"
@@ -218,12 +210,12 @@ def webhook():
             return str(resp)
 
         # =========================
-        # 🔥 RESPUESTA INTELIGENTE
+        # 🔥 RESPUESTA NORMAL
         # =========================
         respuesta = (
             obtener_respuesta(negocio, incoming_msg)
             or obtener_respuesta(negocio, "hola")
-            or "👋 Escribe *hola* para comenzar"
+            or "👋 Escribe *hola*"
         )
 
         msg.body(respuesta)
@@ -236,7 +228,7 @@ def webhook():
         return str(resp)
 
 # =========================
-# 🔥 VER CITAS
+# 🔥 CITAS
 # =========================
 @main.route("/citas")
 def ver_citas():
@@ -272,7 +264,7 @@ def ver_citas():
     return html
 
 # =========================
-# 🔥 CRUD RESPUESTAS
+# 🔥 RESPUESTAS
 # =========================
 @main.route("/respuestas")
 def ver_respuestas():
