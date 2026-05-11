@@ -154,18 +154,14 @@ def panel():
     """
 
 # =========================
-# 🔥 WEBHOOK (DEBUG REAL SIN ROMPER)
+# 🔥 WEBHOOK (PRODUCCION FINAL OK)
 # =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
-    print("🔥 WEBHOOK HIT")
-
     try:
         raw_from = request.form.get("From", "")
         raw_to = request.form.get("To", "")
         raw_body = request.form.get("Body", "")
-
-        print(f"📦 FORM RAW: {dict(request.form)}")
 
         user_number = normalizar_numero(raw_from)
         numero_twilio = normalizar_numero(raw_to)
@@ -177,48 +173,21 @@ def webhook():
 
         incoming_msg = incoming_msg.lower()
 
-        print(f"📩 MSG: {incoming_msg}")
-        print(f"👤 FROM(raw): {raw_from} -> {user_number}")
-        print(f"🤖 TO(raw): {raw_to} -> {numero_twilio}")
-
-        # =========================
-        # 🔥 TEST DIRECTO (IMPORTANTE)
-        # =========================
-        # Si esto responde, el problema es DATABASE
-        if incoming_msg == "test":
-            resp = MessagingResponse()
-            resp.message("✅ WEBHOOK OK")
-            return str(resp)
-
         from database import guardar_cita, obtener_negocio_por_cliente
 
         # =========================
         # 🔥 OBTENER NEGOCIO
         # =========================
-        try:
-            negocio = obtener_negocio_por_cliente(user_number)
+        negocio = obtener_negocio_por_cliente(user_number)
 
-            if not negocio:
-                negocio = numero_twilio
-
-        except Exception as e:
-            print("❌ ERROR obtener_negocio_por_cliente:", str(e))
+        if not negocio:
             negocio = numero_twilio
-
-        print(f"🏢 NEGOCIO: {negocio}")
 
         # =========================
         # 🔥 GUARDAR DATOS
         # =========================
-        try:
-            registrar_cliente(user_number, negocio)
-        except Exception as e:
-            print("❌ ERROR registrar_cliente:", str(e))
-
-        try:
-            guardar_usuario(user_number, incoming_msg, negocio)
-        except Exception as e:
-            print("❌ ERROR guardar_usuario:", str(e))
+        registrar_cliente(user_number, negocio)
+        guardar_usuario(user_number, incoming_msg, negocio)
 
         resp = MessagingResponse()
         msg = resp.message()
@@ -231,12 +200,7 @@ def webhook():
         if estado == "esperando_fecha":
             estado_usuarios[user_number] = None
 
-            try:
-                guardar_cita(user_number, negocio, incoming_msg)
-            except Exception as e:
-                print("❌ ERROR guardar_cita:", str(e))
-
-            print(f"📅 NUEVA CITA → {user_number} | {incoming_msg}")
+            guardar_cita(user_number, negocio, incoming_msg)
 
             msg.body(
                 f"✅ Cita confirmada 🎉\n\n"
@@ -263,36 +227,24 @@ def webhook():
         # =========================
         # 🔥 RESPUESTA DB
         # =========================
-        respuesta = None
-
-        try:
-            respuesta = obtener_respuesta(negocio, incoming_msg)
-        except Exception as e:
-            print("❌ ERROR obtener_respuesta exacta:", str(e))
+        respuesta = obtener_respuesta(negocio, incoming_msg)
 
         if not respuesta:
-            print("⚠️ No encontró respuesta exacta")
-
-            try:
-                respuesta = obtener_respuesta(negocio, "hola")
-            except Exception as e:
-                print("❌ ERROR obtener_respuesta hola:", str(e))
+            respuesta = obtener_respuesta(negocio, "hola")
 
         if not respuesta:
-            print("⚠️ No existe 'hola' en DB")
             respuesta = "👋 Hola, el bot está activo"
 
         msg.body(respuesta)
 
-        print("✅ RESPUESTA ENVIADA")
-
         return str(resp)
 
     except Exception as e:
-        print("❌ ERROR WEBHOOK GENERAL:", str(e))
+        print("❌ ERROR WEBHOOK:", str(e))
 
         resp = MessagingResponse()
         resp.message("❌ Error interno")
+
         return str(resp)
 
 
@@ -332,6 +284,7 @@ def ver_citas():
 
     return html
 
+
 # =========================
 # 🔥 RESPUESTAS
 # =========================
@@ -350,6 +303,7 @@ def ver_respuestas():
 
     return html
 
+
 @main.route("/agregar_form")
 def agregar_form():
     if "tipo" not in session:
@@ -364,6 +318,7 @@ def agregar_form():
     </form>
     """
 
+
 @main.route("/agregar")
 def agregar():
     if "tipo" not in session:
@@ -376,6 +331,7 @@ def agregar():
     guardar_respuesta(numero, palabra, respuesta)
     return "Guardado"
 
+
 @main.route("/eliminar")
 def eliminar():
     if "tipo" not in session:
@@ -386,6 +342,7 @@ def eliminar():
 
     eliminar_respuesta(numero, palabra)
     return "Eliminado"
+
 
 # =========================
 # 🔥 ELIMINAR CLIENTE
