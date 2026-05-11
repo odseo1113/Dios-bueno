@@ -154,36 +154,71 @@ def panel():
     """
 
 # =========================
-# 🔥 WEBHOOK (FIX FINAL)
+# 🔥 WEBHOOK (DEBUG REAL SIN ROMPER)
 # =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
+    print("🔥 WEBHOOK HIT")
+
     try:
         raw_from = request.form.get("From", "")
         raw_to = request.form.get("To", "")
+        raw_body = request.form.get("Body", "")
+
+        print(f"📦 FORM RAW: {dict(request.form)}")
 
         user_number = normalizar_numero(raw_from)
         numero_twilio = normalizar_numero(raw_to)
 
-        incoming_msg = (request.form.get("Body", "") or "").strip().lower()
+        incoming_msg = (raw_body or "").strip()
 
         if not incoming_msg:
             incoming_msg = "hola"
 
-        from database import guardar_cita, obtener_negocio_por_cliente
-
-        # 🔥 FIX CLAVE: fallback robusto
-        negocio = obtener_negocio_por_cliente(user_number)
-        if not negocio:
-            negocio = numero_twilio
+        incoming_msg = incoming_msg.lower()
 
         print(f"📩 MSG: {incoming_msg}")
         print(f"👤 FROM(raw): {raw_from} -> {user_number}")
         print(f"🤖 TO(raw): {raw_to} -> {numero_twilio}")
+
+        # =========================
+        # 🔥 TEST DIRECTO (IMPORTANTE)
+        # =========================
+        # Si esto responde, el problema es DATABASE
+        if incoming_msg == "test":
+            resp = MessagingResponse()
+            resp.message("✅ WEBHOOK OK")
+            return str(resp)
+
+        from database import guardar_cita, obtener_negocio_por_cliente
+
+        # =========================
+        # 🔥 OBTENER NEGOCIO
+        # =========================
+        try:
+            negocio = obtener_negocio_por_cliente(user_number)
+
+            if not negocio:
+                negocio = numero_twilio
+
+        except Exception as e:
+            print("❌ ERROR obtener_negocio_por_cliente:", str(e))
+            negocio = numero_twilio
+
         print(f"🏢 NEGOCIO: {negocio}")
 
-        registrar_cliente(user_number, negocio)
-        guardar_usuario(user_number, incoming_msg, negocio)
+        # =========================
+        # 🔥 GUARDAR DATOS
+        # =========================
+        try:
+            registrar_cliente(user_number, negocio)
+        except Exception as e:
+            print("❌ ERROR registrar_cliente:", str(e))
+
+        try:
+            guardar_usuario(user_number, incoming_msg, negocio)
+        except Exception as e:
+            print("❌ ERROR guardar_usuario:", str(e))
 
         resp = MessagingResponse()
         msg = resp.message()
@@ -196,7 +231,10 @@ def webhook():
         if estado == "esperando_fecha":
             estado_usuarios[user_number] = None
 
-            guardar_cita(user_number, negocio, incoming_msg)
+            try:
+                guardar_cita(user_number, negocio, incoming_msg)
+            except Exception as e:
+                print("❌ ERROR guardar_cita:", str(e))
 
             print(f"📅 NUEVA CITA → {user_number} | {incoming_msg}")
 
@@ -205,6 +243,7 @@ def webhook():
                 f"📅 {incoming_msg}\n\n"
                 "⏰ Te esperamos"
             )
+
             return str(resp)
 
         # =========================
@@ -218,30 +257,44 @@ def webhook():
                 "Escribe fecha y hora:\n"
                 "Ej: 10 mayo 3pm"
             )
+
             return str(resp)
 
         # =========================
         # 🔥 RESPUESTA DB
         # =========================
-        respuesta = obtener_respuesta(negocio, incoming_msg)
+        respuesta = None
+
+        try:
+            respuesta = obtener_respuesta(negocio, incoming_msg)
+        except Exception as e:
+            print("❌ ERROR obtener_respuesta exacta:", str(e))
 
         if not respuesta:
             print("⚠️ No encontró respuesta exacta")
-            respuesta = obtener_respuesta(negocio, "hola")
+
+            try:
+                respuesta = obtener_respuesta(negocio, "hola")
+            except Exception as e:
+                print("❌ ERROR obtener_respuesta hola:", str(e))
 
         if not respuesta:
             print("⚠️ No existe 'hola' en DB")
-            respuesta = "👋 Escribe *hola* para comenzar"
+            respuesta = "👋 Hola, el bot está activo"
 
         msg.body(respuesta)
+
+        print("✅ RESPUESTA ENVIADA")
+
         return str(resp)
 
     except Exception as e:
-        print("❌ ERROR WEBHOOK:", str(e))
+        print("❌ ERROR WEBHOOK GENERAL:", str(e))
 
         resp = MessagingResponse()
-        resp.message("Error interno")
+        resp.message("❌ Error interno")
         return str(resp)
+
 
 # =========================
 # 🔥 CITAS
