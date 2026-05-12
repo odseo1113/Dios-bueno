@@ -392,19 +392,6 @@ def ver_clientes():
             box-shadow:0 2px 5px rgba(0,0,0,0.1);
         ">
             📱 {cliente}
-
-            <br><br>
-
-            <a href="/eliminar_cliente?username={cliente}"
-               style="
-               background:red;
-               color:white;
-               padding:8px 12px;
-               text-decoration:none;
-               border-radius:8px;
-               ">
-               ❌ Eliminar
-            </a>
         </div>
         """
 
