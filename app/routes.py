@@ -11,7 +11,9 @@ from database import (
     validar_usuario,
     crear_cuenta,
     conectar,
-    eliminar_cliente
+    eliminar_cliente,
+    guardar_estado,
+    obtener_estado
 )
 
 import os
@@ -23,10 +25,6 @@ print("🔥 BOT VENTAS + CITAS ACTIVADO")
 
 main = Blueprint('main', __name__)
 
-# =========================
-# 🔥 MEMORIA SIMPLE
-# =========================
-estado_usuarios = {}
 
 # =========================
 # 🔹 BASICO
@@ -154,7 +152,7 @@ def panel():
     """
 
 # =========================
-# 🔥 WEBHOOK (PRODUCCION FINAL OK)
+# 🔥 WEBHOOK (PRODUCCION FINAL OK + PERSISTENCIA)
 # =========================
 @main.route("/webhook", methods=["POST"])
 def webhook():
@@ -173,6 +171,11 @@ def webhook():
 
         incoming_msg = incoming_msg.lower()
 
+        print("🔥 WEBHOOK HIT")
+        print(f"📩 MSG: {incoming_msg}")
+        print(f"👤 FROM(raw): {raw_from} -> {user_number}")
+        print(f"🤖 TO(raw): {raw_to} -> {numero_twilio}")
+
         from database import guardar_cita, obtener_negocio_por_cliente
 
         # =========================
@@ -183,6 +186,9 @@ def webhook():
         if not negocio:
             negocio = numero_twilio
 
+        print(f"🏢 NEGOCIO: {negocio}")
+        print(f"🔥 TIPO USADO WEBHOOK: {negocio}")
+
         # =========================
         # 🔥 GUARDAR DATOS
         # =========================
@@ -192,15 +198,21 @@ def webhook():
         resp = MessagingResponse()
         msg = resp.message()
 
-        estado = estado_usuarios.get(user_number)
+        # =========================
+        # 🔥 ESTADO DESDE DB
+        # =========================
+        estado = obtener_estado(user_number)
 
         # =========================
         # 🔥 CONFIRMAR CITA
         # =========================
         if estado == "esperando_fecha":
-            estado_usuarios[user_number] = None
+
+            guardar_estado(user_number, "")
 
             guardar_cita(user_number, negocio, incoming_msg)
+
+            print(f"📅 NUEVA CITA → {user_number} | {incoming_msg}")
 
             msg.body(
                 f"✅ Cita confirmada 🎉\n\n"
@@ -214,7 +226,8 @@ def webhook():
         # 🔥 ACTIVAR CITA
         # =========================
         if incoming_msg == "3" or "cita" in incoming_msg:
-            estado_usuarios[user_number] = "esperando_fecha"
+
+            guardar_estado(user_number, "esperando_fecha")
 
             msg.body(
                 "📅 Perfecto 👌\n\n"
@@ -229,13 +242,21 @@ def webhook():
         # =========================
         respuesta = obtener_respuesta(negocio, incoming_msg)
 
-        if not respuesta:
-            respuesta = obtener_respuesta(negocio, "hola")
+        print(f"🔎 RESPUESTA EXACTA: {respuesta}")
 
         if not respuesta:
+            print("⚠️ No encontró respuesta exacta")
+            respuesta = obtener_respuesta(negocio, "hola")
+
+        print(f"🔎 RESPUESTA FALLBACK: {respuesta}")
+
+        if not respuesta:
+            print("⚠️ No existe 'hola' en DB")
             respuesta = "👋 Hola, el bot está activo"
 
         msg.body(respuesta)
+
+        print("✅ RESPUESTA ENVIADA")
 
         return str(resp)
 
@@ -246,117 +267,3 @@ def webhook():
         resp.message("❌ Error interno")
 
         return str(resp)
-
-
-# =========================
-# 🔥 CITAS
-# =========================
-@main.route("/citas")
-def ver_citas():
-    if "tipo" not in session:
-        return redirect("/login")
-
-    tipo = session["tipo"]
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT cliente, fecha, estado, creado
-        FROM citas
-        WHERE negocio = %s
-        ORDER BY creado DESC
-    """, (tipo,))
-
-    datos = cursor.fetchall()
-    conn.close()
-
-    html = f"<h2>📅 Citas de {tipo}</h2><hr>"
-
-    for cliente, fecha, estado, creado in datos:
-        html += f"""
-        👤 {cliente}<br>
-        📅 {fecha}<br>
-        📌 {estado}<br>
-        🕒 {creado}<br>
-        <hr>
-        """
-
-    return html
-
-
-# =========================
-# 🔥 RESPUESTAS
-# =========================
-@main.route("/respuestas")
-def ver_respuestas():
-    if "tipo" not in session:
-        return redirect("/login")
-
-    numero = session["tipo"]
-    datos = obtener_respuestas(numero)
-
-    html = "<h2>Respuestas</h2><hr>"
-
-    for palabra, respuesta in datos:
-        html += f"{palabra} → {respuesta}<br>"
-
-    return html
-
-
-@main.route("/agregar_form")
-def agregar_form():
-    if "tipo" not in session:
-        return redirect("/login")
-
-    return """
-    <h2>Nueva respuesta</h2>
-    <form action="/agregar">
-        Palabra: <input name="palabra"><br><br>
-        Respuesta: <input name="respuesta"><br><br>
-        <button>Guardar</button>
-    </form>
-    """
-
-
-@main.route("/agregar")
-def agregar():
-    if "tipo" not in session:
-        return redirect("/login")
-
-    numero = session["tipo"]
-    palabra = request.args.get("palabra")
-    respuesta = request.args.get("respuesta")
-
-    guardar_respuesta(numero, palabra, respuesta)
-    return "Guardado"
-
-
-@main.route("/eliminar")
-def eliminar():
-    if "tipo" not in session:
-        return redirect("/login")
-
-    numero = session["tipo"]
-    palabra = request.args.get("palabra")
-
-    eliminar_respuesta(numero, palabra)
-    return "Eliminado"
-
-
-# =========================
-# 🔥 ELIMINAR CLIENTE
-# =========================
-@main.route("/eliminar_cliente")
-def eliminar_cliente_route():
-    if "tipo" not in session:
-        return redirect("/login")
-
-    username = request.args.get("username")
-
-    ok = eliminar_cliente(username)
-
-    if not ok:
-        return "❌ No encontrado"
-
-    return "✅ Eliminado"
