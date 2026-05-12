@@ -132,7 +132,7 @@ def logout():
     return "Sesión cerrada"
 
 # =========================
-# 🔥 PANEL
+# 🔥 PANEL PROFESIONAL
 # =========================
 @main.route("/panel")
 def panel():
@@ -141,14 +141,167 @@ def panel():
 
     tipo = session["tipo"]
 
+    conn = conectar()
+    cursor = conn.cursor()
+
+    # =========================
+    # 🔥 TOTAL MENSAJES
+    # =========================
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM usuarios
+        WHERE tipo = %s
+    """, (tipo,))
+
+    total_mensajes = cursor.fetchone()[0]
+
+    # =========================
+    # 🔥 TOTAL CLIENTES
+    # =========================
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM clientes
+        WHERE tipo = %s
+    """, (tipo,))
+
+    total_clientes = cursor.fetchone()[0]
+
+    # =========================
+    # 🔥 TOTAL CITAS
+    # =========================
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM citas
+        WHERE negocio = %s
+    """, (tipo,))
+
+    total_citas = cursor.fetchone()[0]
+
+    conn.close()
+
     return f"""
-    <h2>Panel {tipo}</h2>
+    <html>
+    <head>
+        <title>Panel SaaS</title>
 
-    <a href="/respuestas">📋 Respuestas</a><br><br>
-    <a href="/agregar_form">➕ Agregar respuesta</a><br><br>
-    <a href="/citas">📅 Ver citas</a><br><br>
+        <style>
+            body {{
+                background: #f5f7fb;
+                font-family: Arial;
+                padding: 30px;
+            }}
 
-    <a href="/logout">🚪 Salir</a>
+            .top {{
+                margin-bottom: 30px;
+            }}
+
+            .card-container {{
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+                margin-bottom: 30px;
+            }}
+
+            .card {{
+                background: white;
+                padding: 25px;
+                border-radius: 15px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                min-width: 220px;
+            }}
+
+            .card h3 {{
+                margin: 0;
+                color: #666;
+            }}
+
+            .number {{
+                font-size: 35px;
+                font-weight: bold;
+                margin-top: 10px;
+                color: #111;
+            }}
+
+            .menu {{
+                background: white;
+                padding: 25px;
+                border-radius: 15px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            }}
+
+            .menu a {{
+                display: block;
+                padding: 15px;
+                margin-bottom: 10px;
+                background: #0d6efd;
+                color: white;
+                text-decoration: none;
+                border-radius: 10px;
+                font-weight: bold;
+            }}
+
+            .menu a:hover {{
+                background: #0b5ed7;
+            }}
+
+            .logout {{
+                background: #dc3545 !important;
+            }}
+
+            .logout:hover {{
+                background: #bb2d3b !important;
+            }}
+        </style>
+    </head>
+
+    <body>
+
+        <div class="top">
+            <h1>🤖 Panel SaaS WhatsApp</h1>
+            <p><b>Negocio:</b> {tipo}</p>
+        </div>
+
+        <div class="card-container">
+
+            <div class="card">
+                <h3>💬 Mensajes</h3>
+                <div class="number">{total_mensajes}</div>
+            </div>
+
+            <div class="card">
+                <h3>👥 Clientes</h3>
+                <div class="number">{total_clientes}</div>
+            </div>
+
+            <div class="card">
+                <h3>📅 Citas</h3>
+                <div class="number">{total_citas}</div>
+            </div>
+
+        </div>
+
+        <div class="menu">
+
+            <a href="/respuestas">
+                📋 Ver respuestas
+            </a>
+
+            <a href="/agregar_form">
+                ➕ Agregar respuesta
+            </a>
+
+            <a href="/citas">
+                📅 Ver citas
+            </a>
+
+            <a href="/logout" class="logout">
+                🚪 Cerrar sesión
+            </a>
+
+        </div>
+
+    </body>
+    </html>
     """
 
 # =========================
