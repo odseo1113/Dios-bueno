@@ -363,11 +363,10 @@ def ver_clientes():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT username, creado
+        SELECT *
         FROM clientes
-        WHERE tipo = %s
-        ORDER BY creado DESC
-    """, (tipo,))
+        LIMIT 20
+    """)
 
     datos = cursor.fetchall()
 
@@ -375,13 +374,11 @@ def ver_clientes():
 
     html = f"<h2>👥 Clientes ({tipo})</h2><hr>"
 
-    for username, creado in datos:
+    if not datos:
+        html += "No hay clientes aún"
 
-        html += f"""
-        👤 {username}<br>
-        🕒 {creado}<br><br>
-        <hr>
-        """
+    for fila in datos:
+        html += f"{fila}<br><hr>"
 
     return html
 
