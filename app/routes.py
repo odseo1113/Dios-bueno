@@ -65,6 +65,7 @@ def registro_form():
 
 @main.route("/registro", methods=["POST"])
 def registro():
+
     from database import obtener_numero_disponible
 
     username = request.form.get("username")
@@ -139,6 +140,7 @@ def registro():
 # =========================
 @main.route("/login", methods=["GET"])
 def login_form():
+
     return """
     <h2>🔐 Login</h2>
 
@@ -159,6 +161,7 @@ def login_form():
 
 @main.route("/login", methods=["POST"])
 def login():
+
     username = request.form.get("username")
     password = request.form.get("password")
 
@@ -172,7 +175,9 @@ def login():
 
 @main.route("/logout")
 def logout():
+
     session.clear()
+
     return redirect("/login")
 
 # =========================
@@ -192,35 +197,50 @@ def panel():
     # =========================
     # 🔥 MENSAJES
     # =========================
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM usuarios
-        WHERE tipo = %s
-    """, (tipo,))
+    try:
 
-    total_mensajes = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM usuarios
+            WHERE tipo = %s
+        """, (tipo,))
+
+        total_mensajes = cursor.fetchone()[0]
+
+    except:
+        total_mensajes = 0
 
     # =========================
     # 🔥 CLIENTES
     # =========================
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM clientes
-        WHERE tipo = %s
-    """, (tipo,))
+    try:
 
-    total_clientes = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM clientes
+            WHERE tipo = %s
+        """, (tipo,))
+
+        total_clientes = cursor.fetchone()[0]
+
+    except:
+        total_clientes = 0
 
     # =========================
     # 🔥 CITAS
     # =========================
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM citas
-        WHERE negocio = %s
-    """, (tipo,))
+    try:
 
-    total_citas = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM citas
+            WHERE negocio = %s
+        """, (tipo,))
+
+        total_citas = cursor.fetchone()[0]
+
+    except:
+        total_citas = 0
 
     conn.close()
 
@@ -362,14 +382,21 @@ def ver_clientes():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT id, cliente
-        FROM clientes
-        WHERE tipo = %s
-        ORDER BY id DESC
-    """, (tipo,))
+    try:
 
-    datos = cursor.fetchall()
+        cursor.execute("""
+            SELECT cliente
+            FROM clientes
+            WHERE tipo = %s
+            ORDER BY id DESC
+        """, (tipo,))
+
+        datos = cursor.fetchall()
+
+    except Exception as e:
+
+        print("❌ ERROR CLIENTES:", str(e))
+        datos = []
 
     conn.close()
 
@@ -381,7 +408,9 @@ def ver_clientes():
     if not datos:
         html += "No hay clientes aún"
 
-    for cliente_id, cliente in datos:
+    for row in datos:
+
+        cliente = row[0]
 
         html += f"""
         <div style="
@@ -504,6 +533,7 @@ def webhook():
         )
 
         if not respuesta:
+
             respuesta = obtener_respuesta(
                 negocio,
                 "hola"
@@ -542,26 +572,44 @@ def ver_citas():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT cliente, fecha, estado, creado
-        FROM citas
-        WHERE negocio = %s
-        ORDER BY creado DESC
-    """, (tipo,))
+    try:
 
-    datos = cursor.fetchall()
+        cursor.execute("""
+            SELECT cliente, fecha, estado, creado
+            FROM citas
+            WHERE negocio = %s
+            ORDER BY creado DESC
+        """, (tipo,))
+
+        datos = cursor.fetchall()
+
+    except Exception as e:
+
+        print("❌ ERROR CITAS:", str(e))
+        datos = []
 
     conn.close()
 
     html = f"<h2>📅 Citas ({tipo})</h2><hr>"
 
+    if not datos:
+        html += "No hay citas aún"
+
     for cliente, fecha, estado, creado in datos:
 
         html += f"""
-        👤 {cliente}<br>
-        📅 {fecha}<br>
-        📌 {estado}<br>
-        🕒 {creado}<br><hr>
+        <div style="
+            background:white;
+            padding:15px;
+            margin-bottom:10px;
+            border-radius:10px;
+            box-shadow:0 2px 5px rgba(0,0,0,0.1);
+        ">
+            👤 {cliente}<br><br>
+            📅 {fecha}<br><br>
+            📌 {estado}<br><br>
+            🕒 {creado}
+        </div>
         """
 
     return html
@@ -581,18 +629,29 @@ def ver_respuestas():
 
     html = f"<h2>📋 Respuestas ({numero})</h2><hr>"
 
+    if not datos:
+        html += "No hay respuestas aún"
+
     for palabra, respuesta in datos:
 
         html += f"""
-        <b>{palabra}</b><br><br>
+        <div style="
+            background:white;
+            padding:15px;
+            margin-bottom:10px;
+            border-radius:10px;
+            box-shadow:0 2px 5px rgba(0,0,0,0.1);
+        ">
 
-        {respuesta}<br><br>
+            <b>{palabra}</b><br><br>
 
-        <a href="/eliminar?palabra={palabra}">
-            ❌ Eliminar
-        </a>
+            {respuesta}<br><br>
 
-        <hr>
+            <a href="/eliminar?palabra={palabra}">
+                ❌ Eliminar
+            </a>
+
+        </div>
         """
 
     return html
@@ -615,9 +674,11 @@ def agregar_form():
         <input name="palabra"><br><br>
 
         Respuesta:<br>
-        <textarea name="respuesta"
-        rows="8"
-        cols="40"></textarea><br><br>
+
+        <textarea
+            name="respuesta"
+            rows="8"
+            cols="40"></textarea><br><br>
 
         <button>
             Guardar
@@ -637,9 +698,12 @@ def agregar():
     palabra = request.args.get("palabra")
     respuesta = request.args.get("respuesta")
 
+    if not palabra or not respuesta:
+        return "❌ Faltan datos"
+
     guardar_respuesta(
         numero,
-        palabra,
+        palabra.lower().strip(),
         respuesta
     )
 
