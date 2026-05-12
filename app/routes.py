@@ -363,22 +363,50 @@ def ver_clientes():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT *
+        SELECT id, cliente
         FROM clientes
-        LIMIT 20
-    """)
+        WHERE tipo = %s
+        ORDER BY id DESC
+    """, (tipo,))
 
     datos = cursor.fetchall()
 
     conn.close()
 
-    html = f"<h2>👥 Clientes ({tipo})</h2><hr>"
+    html = f"""
+    <h2>👥 Clientes ({tipo})</h2>
+    <hr>
+    """
 
     if not datos:
         html += "No hay clientes aún"
 
-    for fila in datos:
-        html += f"{fila}<br><hr>"
+    for cliente_id, cliente in datos:
+
+        html += f"""
+        <div style="
+            background:white;
+            padding:15px;
+            margin-bottom:10px;
+            border-radius:10px;
+            box-shadow:0 2px 5px rgba(0,0,0,0.1);
+        ">
+            📱 {cliente}
+
+            <br><br>
+
+            <a href="/eliminar_cliente?username={cliente}"
+               style="
+               background:red;
+               color:white;
+               padding:8px 12px;
+               text-decoration:none;
+               border-radius:8px;
+               ">
+               ❌ Eliminar
+            </a>
+        </div>
+        """
 
     return html
 
