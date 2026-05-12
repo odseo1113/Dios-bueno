@@ -627,32 +627,51 @@ def ver_respuestas():
 
     datos = obtener_respuestas(numero)
 
-    html = f"<h2>📋 Respuestas ({numero})</h2><hr>"
+    html = f"""
+    <h2>📋 Respuestas ({numero})</h2>
+    <hr>
+    """
 
     if not datos:
-        html += "No hay respuestas aún"
+        html += "⚠️ No hay respuestas aún"
+        return html
 
-    for palabra, respuesta in datos:
+    for fila in datos:
 
-        html += f"""
-        <div style="
-            background:white;
-            padding:15px;
-            margin-bottom:10px;
-            border-radius:10px;
-            box-shadow:0 2px 5px rgba(0,0,0,0.1);
-        ">
+        try:
+            palabra = fila[0]
+            respuesta = fila[1]
 
-            <b>{palabra}</b><br><br>
+            if not palabra:
+                palabra = "sin_palabra"
 
-            {respuesta}<br><br>
+            if not respuesta:
+                respuesta = "sin_respuesta"
 
-            <a href="/eliminar?palabra={palabra}">
-                ❌ Eliminar
-            </a>
+            html += f"""
+            <div style="
+                background:white;
+                padding:20px;
+                margin-bottom:15px;
+                border-radius:12px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.08);
+            ">
 
-        </div>
-        """
+                <b>Palabra:</b><br>
+                {palabra}<br><br>
+
+                <b>Respuesta:</b><br>
+                {respuesta}<br><br>
+
+                <a href="/eliminar?palabra={palabra}">
+                    ❌ Eliminar
+                </a>
+
+            </div>
+            """
+
+        except Exception as e:
+            print("❌ ERROR MOSTRANDO RESPUESTA:", str(e))
 
     return html
 
