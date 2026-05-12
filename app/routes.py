@@ -623,9 +623,13 @@ def ver_respuestas():
     if "tipo" not in session:
         return redirect("/login")
 
-    numero = session["tipo"]
+    numero = str(session["tipo"]).strip()
+
+    print(f"🔥 SESSION TIPO: {numero}")
 
     datos = obtener_respuestas(numero)
+
+    print(f"🔥 RESPUESTAS ENCONTRADAS: {datos}")
 
     html = f"""
     <h2>📋 Respuestas ({numero})</h2>
@@ -633,45 +637,37 @@ def ver_respuestas():
     """
 
     if not datos:
-        html += "⚠️ No hay respuestas aún"
+        html += """
+        ⚠️ No hay respuestas aún<br><br>
+        """
+
+        html += f"""
+        DEBUG tipo usado: {numero}
+        """
+
         return html
 
-    for fila in datos:
+    for palabra, respuesta in datos:
 
-        try:
-            palabra = fila[0]
-            respuesta = fila[1]
+        html += f"""
+        <div style="
+            background:white;
+            padding:20px;
+            margin-bottom:15px;
+            border-radius:12px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.08);
+        ">
 
-            if not palabra:
-                palabra = "sin_palabra"
+            <b>{palabra}</b><br><br>
 
-            if not respuesta:
-                respuesta = "sin_respuesta"
+            {respuesta}<br><br>
 
-            html += f"""
-            <div style="
-                background:white;
-                padding:20px;
-                margin-bottom:15px;
-                border-radius:12px;
-                box-shadow:0 2px 8px rgba(0,0,0,0.08);
-            ">
+            <a href="/eliminar?palabra={palabra}">
+                ❌ Eliminar
+            </a>
 
-                <b>Palabra:</b><br>
-                {palabra}<br><br>
-
-                <b>Respuesta:</b><br>
-                {respuesta}<br><br>
-
-                <a href="/eliminar?palabra={palabra}">
-                    ❌ Eliminar
-                </a>
-
-            </div>
-            """
-
-        except Exception as e:
-            print("❌ ERROR MOSTRANDO RESPUESTA:", str(e))
+        </div>
+        """
 
     return html
 
