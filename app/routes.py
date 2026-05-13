@@ -42,6 +42,7 @@ def ping():
 # =========================
 @main.route("/registro")
 def registro_form():
+
     return """
     <h2>📝 Registro</h2>
 
@@ -662,6 +663,12 @@ def ver_respuestas():
 
             {respuesta}<br><br>
 
+            <a href="/editar_form?palabra={palabra}">
+                ✏️ Editar
+            </a>
+
+            <br><br>
+
             <a href="/eliminar?palabra={palabra}">
                 ❌ Eliminar
             </a>
@@ -715,6 +722,84 @@ def agregar():
 
     if not palabra or not respuesta:
         return "❌ Faltan datos"
+
+    guardar_respuesta(
+        numero,
+        palabra.lower().strip(),
+        respuesta
+    )
+
+    return redirect("/respuestas")
+
+# =========================
+# 🔥 EDITAR RESPUESTA
+# =========================
+@main.route("/editar_form")
+def editar_form():
+
+    if "tipo" not in session:
+        return redirect("/login")
+
+    numero = session["tipo"]
+
+    palabra = request.args.get("palabra")
+
+    datos = obtener_respuestas(numero)
+
+    respuesta_actual = ""
+
+    for p, r in datos:
+
+        if p == palabra:
+            respuesta_actual = r
+            break
+
+    return f"""
+    <h2>✏️ Editar respuesta</h2>
+
+    <form action="/editar">
+
+        <input
+            type="hidden"
+            name="palabra"
+            value="{palabra}"
+        >
+
+        Palabra:<br><br>
+
+        <b>{palabra}</b><br><br>
+
+        Respuesta:<br><br>
+
+        <textarea
+            name="respuesta"
+            rows="10"
+            cols="50">{respuesta_actual}</textarea>
+
+        <br><br>
+
+        <button>
+            Guardar cambios
+        </button>
+
+    </form>
+    """
+
+@main.route("/editar")
+def editar():
+
+    if "tipo" not in session:
+        return redirect("/login")
+
+    numero = session["tipo"]
+
+    palabra = request.args.get("palabra")
+    respuesta = request.args.get("respuesta")
+
+    if not palabra or not respuesta:
+        return "❌ Faltan datos"
+
+    eliminar_respuesta(numero, palabra)
 
     guardar_respuesta(
         numero,
