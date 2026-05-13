@@ -386,7 +386,7 @@ def ver_clientes():
     try:
 
         cursor.execute("""
-            SELECT cliente
+            SELECT numero
             FROM clientes
             WHERE tipo = %s
             ORDER BY id DESC
